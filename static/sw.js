@@ -1,8 +1,9 @@
-const CACHE_NAME = 'talky-pwa-v3';
+const CACHE_NAME = 'talky-pwa-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/css/style.css',
+  '/js/gradio_api.js',
   '/js/app.js',
   '/manifest.json'
 ];
@@ -18,11 +19,11 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Only cache GET requests (don't cache POST requests like /api/generate)
+  // Only cache GET requests
   if (event.request.method !== 'GET') return;
   
-  // Don't cache API endpoints
-  if (event.request.url.includes('/api/')) return;
+  // Don't cache external Gradio API calls (audio generation)
+  if (event.request.url.includes('hf.space')) return;
 
   event.respondWith(
     caches.match(event.request)

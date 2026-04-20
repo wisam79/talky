@@ -255,24 +255,40 @@
         URL.revokeObjectURL(audioPlayer.src);
       }
       
+      // Build instruct string from form fields
       const formData = new FormData(generateForm);
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/generate`, { method: 'POST', body: formData });
+      const roleFull    = formData.get('role')    || 'Auto';
+      const genderFull  = formData.get('gender')  || 'Auto';
+      const accentFull  = formData.get('accent')  || 'Auto';
+      const dialectFull = formData.get('dialect') || 'Auto';
+      const instructParts = [];
+      if (genderFull  !== 'Auto') instructParts.push(genderFull.split(' / ')[0].trim());
+      if (roleFull    !== 'Auto') instructParts.push(roleFull.split(' / ')[0].trim());
+      if (accentFull  !== 'Auto') instructParts.push(accentFull.split(' / ')[0].trim());
+      if (dialectFull !== 'Auto') { const p = dialectFull.split(' / '); instructParts.push((p[1]||p[0]).trim()); }
+      const instruct = instructParts.join(', ');
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({ detail: response.statusText }));
-        throw new Error(err.detail || 'فشل الطلب');
-      }
+      const refFile = refAudioInput.files[0] || null;
+      const refTxt  = document.getElementById('ref_text')?.value || '';
 
-      const blob = await response.blob();
+      // ✅ Call OmniVoice directly from browser (no backend needed)
+      const objectUrl = await generateVoiceGradio({
+        text,
+        language: formData.get('language') || 'Auto',
+        refAudio: refFile,
+        refText:  refTxt,
+        instruct
+      });
+
+      const audioRes = await fetch(objectUrl);
+      const blob = await audioRes.blob();
       currentAudioBlob = blob;
-      const url = URL.createObjectURL(blob);
+      const url = objectUrl;
       audioPlayer.src = url;
       resultCard.style.display = 'block';
       resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
       drawWaveform(blob);
-      saveToHistory(text, blob, roleInput.value);
-
+      saveToHistory(text, blob, roleFull);
       showToast('تم التوليد بنجاح! 🎉', 'success');
       audioPlayer.play().catch(() => {});
 
@@ -714,24 +730,22 @@
       const { char, text: lineText } = lines[i];
       podcastProgress.textContent = `(${i + 1}/${lines.length})`;
 
-      const fd = new FormData();
-      fd.append('text', lineText);
-      fd.append('language', 'Auto');
-      fd.append('role', charSettings[char]?.role || 'Auto');
-      fd.append('gender', charSettings[char]?.gender || 'Auto');
-      fd.append('dialect', 'Auto');
-      fd.append('accent', 'Auto');
-      fd.append('ref_text', '');
-      fd.append('seed', 0);
-
+      // Build instruct from character settings
+      const cs = charSettings[char] || {};
+      const instParts = [];
+      if (cs.gender && cs.gender !== 'Auto') instParts.push(cs.gender.split(' / ')[0].trim());
+      if (cs.role   && cs.role   !== 'Auto') instParts.push(cs.role.split(' / ')[0].trim());
+      
       try {
-        const res = await fetch(`${API_CONFIG.BASE_URL}/api/generate`, { method: 'POST', body: fd });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ detail: res.statusText }));
-          throw new Error(err.detail || 'فشل الطلب');
-        }
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
+        // ✅ Call OmniVoice directly from browser
+        const objUrl = await generateVoiceGradio({
+          text: lineText,
+          language: 'Auto',
+          instruct: instParts.join(', ')
+        });
+        const bRes = await fetch(objUrl);
+        const blob = await bRes.blob();
+        const url  = URL.createObjectURL(blob);
         podcastBlobs.push({ char, text: lineText, blob, url });
 
         const track = document.createElement('div');
