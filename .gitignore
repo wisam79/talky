@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 .pytest_cache/
 test_output.wav
+gradio_config.json
