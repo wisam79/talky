@@ -1,4 +1,4 @@
-gradio_client==2.0.3
+gradio_client
 fastapi
 uvicorn
 python-multipart
