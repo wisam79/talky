@@ -7,6 +7,12 @@ import subprocess
 import sys
 import getpass
 import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # python-dotenv not installed, continue without it
+    pass
 
 # ───── إعدادات Space ───────────────────────────────────────────────
 HF_USERNAME    = "wisam99"
@@ -45,13 +51,21 @@ def main():
     check_git_installed()
 
     # ── طلب التوكن ──────────────────────────────────────────────────
-    print("\n📌 احصل على Access Token (Write) من:")
-    print("   https://huggingface.co/settings/tokens\n")
-    token = getpass.getpass("🔑 أدخل HF Access Token (لن يُعرض أثناء الكتابة): ").strip()
+    # أولاً نتحقق من وجود التوكن في ملف .env
+    token = os.getenv("HF_TOKEN", "").strip()
+    
+    if not token:
+        print("\n📌 احصل على Access Token (Write) من:")
+        print("   https://huggingface.co/settings/tokens\n")
+        print("💡 يمكنك وضع التوكن في ملف .env لكي لا تكتبه كل مرة!\n")
+        token = getpass.getpass("🔑 أدخل HF Access Token (لن يُعرض أثناء الكتابة): ").strip()
 
     if not token:
         print("❌ لم يتم إدخال توكن. تم الإلغاء.")
         sys.exit(1)
+        
+    if token.startswith("hf_"):
+        print("✅ تم تحميل التوكن بنجاح!")
 
     # ── بناء عنوان الـ remote مع التوكن ──────────────────────────────
     authenticated_url = f"https://{HF_USERNAME}:{token}@huggingface.co/spaces/{HF_USERNAME}/{HF_SPACE_NAME}"

@@ -2,6 +2,7 @@ gradio_client
 fastapi
 uvicorn
 python-multipart
+python-dotenv
 
 # Testing dependencies
 pytest
