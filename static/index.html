@@ -31,16 +31,16 @@
 
   <!-- Tab Navigation -->
   <nav class="tab-nav" role="tablist">
-    <button class="tab-btn active" data-tab="generator" role="tab" aria-selected="true" id="tab-btn-generator">
-      <span class="tab-icon">🎵</span>
+    <button class="tab-btn active" data-tab="generator" role="tab" aria-selected="true" id="tab-btn-generator" aria-controls="tab-generator">
+      <span class="tab-icon" aria-hidden="true">🎵</span>
       <span class="tab-label">إنشاء</span>
     </button>
-    <button class="tab-btn" data-tab="podcast" role="tab" aria-selected="false" id="tab-btn-podcast">
-      <span class="tab-icon">🎭</span>
+    <button class="tab-btn" data-tab="podcast" role="tab" aria-selected="false" id="tab-btn-podcast" aria-controls="tab-podcast">
+      <span class="tab-icon" aria-hidden="true">🎭</span>
       <span class="tab-label">بودكاست</span>
     </button>
-    <button class="tab-btn" data-tab="history" role="tab" aria-selected="false" id="tab-btn-history">
-      <span class="tab-icon">📚</span>
+    <button class="tab-btn" data-tab="history" role="tab" aria-selected="false" id="tab-btn-history" aria-controls="tab-history">
+      <span class="tab-icon" aria-hidden="true">📚</span>
       <span class="tab-label">سجل</span>
     </button>
   </nav>
@@ -189,7 +189,7 @@
               <label for="seed-input">بصمة التنغيم (Seed)</label>
               <div class="seed-row">
                 <input type="number" id="seed-input" name="seed" value="0" min="0" max="9999" class="seed-input">
-                <button type="button" id="random-seed-btn" class="icon-btn" title="توليد رقم عشوائي" aria-label="رقم عشوائي">🎲</button>
+                <button type="button" id="random-seed-btn" class="icon-btn" title="توليد رقم عشوائي" aria-label="توليد رقم عشوائي"><span aria-hidden="true">🎲</span></button>
               </div>
             </div>
           </div>
@@ -212,11 +212,11 @@
       <div class="card-header">
         <span>🎧</span>
         <h2>النتيجة</h2>
-        <button id="download-btn" class="action-icon-btn" title="تحميل الملف الصوتي" aria-label="تحميل">⬇️ تحميل</button>
+        <button id="download-btn" class="action-icon-btn" title="تحميل الملف الصوتي" aria-label="تحميل الملف الصوتي"><span aria-hidden="true">⬇️</span> تحميل</button>
       </div>
 
       <!-- Waveform Visualizer -->
-      <canvas id="waveform-canvas" class="waveform-canvas" aria-label="مخطط موجة الصوت"></canvas>
+      <canvas id="waveform-canvas" class="waveform-canvas" role="img" aria-label="مخطط موجة الصوت"></canvas>
 
       <!-- Audio Player -->
       <audio id="audio-player" controls preload="auto" style="width:100%;margin-top:8px;"></audio>
@@ -295,7 +295,7 @@
     <div class="card">
       <div class="card-header">
         <span>📚</span><h2>سجل الإنشاءات</h2>
-        <button id="clear-history-btn" class="danger-icon-btn" title="مسح السجل كاملاً" aria-label="مسح السجل">🗑️ مسح</button>
+        <button id="clear-history-btn" class="danger-icon-btn" title="مسح السجل كاملاً" aria-label="مسح السجل كاملاً"><span aria-hidden="true">🗑️</span> مسح</button>
       </div>
       <p class="hint-text">يُحفظ السجل محلياً على جهازك ويصل إليه حتى بدون إنترنت.</p>
       <div id="history-list" aria-live="polite">

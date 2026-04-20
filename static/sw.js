@@ -29,13 +29,19 @@ self.addEventListener('fetch', event => {
       .then(response => {
         return response || fetch(event.request).then(fetchResponse => {
           // Only cache static assets and fonts, avoiding dynamic requests
-          if (event.request.url.match(/\.(js|css|html|json|svg|png|jpg|woff2?|ttf)(\?.*)?$/) || event.request.url.includes('fonts.googleapis.com') || event.request.url.includes('fonts.gstatic.com')) {
+          if (fetchResponse.ok && fetchResponse.status === 200 && (event.request.url.match(/\.(js|css|html|json|svg|png|jpg|woff2?|ttf)(\?.*)?$/) || event.request.url.includes('fonts.googleapis.com') || event.request.url.includes('fonts.gstatic.com'))) {
             return caches.open(CACHE_NAME).then(cache => {
               cache.put(event.request, fetchResponse.clone());
               return fetchResponse;
             });
           }
           return fetchResponse;
+        }).catch(() => {
+          return new Response('Offline. Please check your connection.', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'text/plain' }
+          });
         });
       })
   );

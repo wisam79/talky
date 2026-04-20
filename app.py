@@ -47,7 +47,7 @@ def get_client():
                     hf_token = os.getenv("HF_TOKEN")
                     if hf_token and not hf_token.strip():
                         hf_token = None
-                    _client = Client("k2-fsa/OmniVoice", hf_token=hf_token)
+                    _client = Client("k2-fsa/OmniVoice", token=hf_token)
                 except Exception as e:
                     raise HTTPException(status_code=503, detail=f"OmniVoice API unavailable: {str(e)}")
     return _client
@@ -84,7 +84,7 @@ async def generate_voice(
                 ext = ".wav"
             fd, temp_audio_path = tempfile.mkstemp(suffix=ext)
             with os.fdopen(fd, "wb") as buffer:
-                buffer.write(content)
+                await asyncio.to_thread(buffer.write, content)
             ref_audio_input = handle_file(temp_audio_path)
         else:
             ref_audio_input = None
@@ -143,6 +143,8 @@ async def generate_voice(
         # إعادة الملف (fastapi ستقوم بقراءته وبعدها سيتم حذفه من خلال BackgroundTask)
         return FileResponse(path=output_path, media_type="audio/wav", filename="talky_output.wav")
         
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

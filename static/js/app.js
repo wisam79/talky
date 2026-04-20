@@ -401,14 +401,15 @@
     try { ambienceOscillator.stop(); } catch (e) {}
     ambienceOscillator = null;
   }
-  if (ambienceCtx) {
-    ambienceCtx.close().catch(() => {});
-    ambienceCtx = null;
-  }
 }
 
   function startAmbience(type) {
-    ambienceCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!ambienceCtx || ambienceCtx.state === 'closed') {
+      ambienceCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (ambienceCtx.state === 'suspended') {
+      ambienceCtx.resume();
+    }
     const gain = ambienceCtx.createGain();
     gain.gain.value = 0.0;
     gain.connect(ambienceCtx.destination);
@@ -479,7 +480,7 @@
   document.getElementById('download-btn').addEventListener('click', () => {
     if (!currentAudioBlob) return;
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(currentAudioBlob);
+    a.href = audioPlayer.src;
     a.download = 'talky_' + Date.now() + '.wav';
     a.click();
     showToast('جارٍ التحميل...', 'info');
@@ -841,6 +842,13 @@
   /* ================================================================
      INIT
      ================================================================ */
+  // Ensure correct initial tab display
+  document.querySelectorAll('.tab-content').forEach((el, i) => {
+    if (i !== 0) el.style.display = 'none';
+  });
+
+})();
+======================================== */
   // Ensure correct initial tab display
   document.querySelectorAll('.tab-content').forEach((el, i) => {
     if (i !== 0) el.style.display = 'none';

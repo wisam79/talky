@@ -191,8 +191,6 @@ body {
    ============================================================ */
 .card {
   background: var(--surface);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 18px 16px;
@@ -1003,7 +1001,7 @@ audio {
    RESPONSIVE
    ============================================================ */
 @media (max-width: 400px) {
-  .presets-grid { grid-template-columns: repeat(3, 1fr); }
+  .presets-grid { grid-template-columns: repeat(2, 1fr); }
   .options-grid { grid-template-columns: 1fr; }
   .ref-audio-row { grid-template-columns: 1fr; }
   .tab-btn .tab-label { display: none; }
