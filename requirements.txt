@@ -2,3 +2,7 @@ gradio_client
 fastapi
 uvicorn
 python-multipart
+
+# Testing dependencies
+pytest
+httpx

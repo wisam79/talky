@@ -19,11 +19,23 @@ self.addEventListener('install', event => {
 self.addEventListener('fetch', event => {
   // Only cache GET requests (don't cache POST requests like /api/generate)
   if (event.request.method !== 'GET') return;
+  
+  // Don't cache API endpoints
+  if (event.request.url.includes('/api/')) return;
 
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        return response || fetch(event.request);
+        return response || fetch(event.request).then(fetchResponse => {
+          // Only cache static assets, not dynamic content
+          if (event.request.url.match(/\.(js|css|html|json|svg|png|jpg)$/)) {
+            return caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, fetchResponse.clone());
+              return fetchResponse;
+            });
+          }
+          return fetchResponse;
+        });
       })
   );
 });

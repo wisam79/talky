@@ -14,7 +14,7 @@ app = FastAPI(title="Talky PWA Backend")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,  # ✅ FIXED: Cannot use credentials with * origins
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -23,6 +23,8 @@ app.add_middleware(
 os.makedirs("static", exist_ok=True)
 
 # نقطة الاتصال مع OmniVoice
+client = Client("k2-fsa/OmniVoice")  # Initialize once at startup
+
 @app.post("/api/generate")
 async def generate_voice(
     text: str = Form(...),
@@ -42,34 +44,48 @@ async def generate_voice(
     try:
         # إذا كان هناك ملف مرجعي، نقوم بحفظه مؤقتاً
         if ref_audio is not None and ref_audio.filename:
+            # Limit file size to 10MB
+            max_size = 10 * 1024 * 1024  # 10MB
+            content = await ref_audio.read(max_size + 1)
+            
+            if len(content) > max_size:
+                raise HTTPException(status_code=413, detail="Reference audio file too large. Maximum 10MB allowed.")
+                
             fd, temp_audio_path = tempfile.mkstemp(suffix=".wav")
             os.close(fd)
             with open(temp_audio_path, "wb") as buffer:
-                shutil.copyfileobj(ref_audio.file, buffer)
+                buffer.write(content)
             ref_audio_input = handle_file(temp_audio_path)
         else:
             ref_audio_input = None
 
-        # الاتصال بالخادم
-        client = Client("k2-fsa/OmniVoice")
-        
+        # Build instruction string from voice attributes
+        instruct_parts = []
+        if gender != "Auto":
+            instruct_parts.append(gender.split(" / ")[0].strip())
+        if role != "Auto":
+            instruct_parts.append(role.split(" / ")[0].strip())
+        if accent != "Auto":
+            instruct_parts.append(accent.split(" / ")[0].strip())
+        if dialect != "Auto":
+            instruct_parts.append(dialect.split(" / ")[1].strip())  # Dialects use Chinese part
+            
+        instruct = ", ".join(instruct_parts) if instruct_parts else None
+
         result = client.predict(
-            param_0=text,
-            param_1=None, # text_file
-            param_2=True, # auto_detect_language
-            param_3=language,
-            param_4=ref_text, # ref_text_content
-            param_5=ref_audio_input, # ref_audio__录音
-            param_6=ref_audio_input, # ref_audio_file
-            param_7=True if ref_audio_input else False, # enable_few_shots_cloning
-            param_8=False, # streaming
-            param_9=True, # enhance quality
-            param_10=seed, # seed
-            param_11=gender,
-            param_12=role,
-            param_13=accent,
-            param_14=dialect,
-            api_name="/predict"
+            text,            # param_0: text
+            language,        # param_1: language
+            ref_audio_input, # param_2: ref_audio
+            ref_text,        # param_3: ref_text ✅ ✅ ✅ FINAL FIX: Correct order
+            instruct,        # param_4: instruct ✅ ✅ ✅ FINAL FIX: Correct order
+            32,              # param_5: ns (Number of steps)
+            2.0,             # param_6: gs (Guidance Scale)
+            True,            # param_7: dn
+            1.0,             # param_8: sp
+            None,            # param_9: du (None = auto)
+            True,            # param_10: pp
+            True,            # param_11: po
+            fn_index=0
         )
         
         # استخراج مخرج الصوت

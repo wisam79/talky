@@ -8,13 +8,15 @@
 (function () {
   'use strict';
 
-  /* ================================================================
-     GLOBALS
-     ================================================================ */
+   /* ================================================================
+      GLOBALS
+      ================================================================ */
   let currentAudioBlob = null;
   let ambienceCtx = null;
   let ambienceSource = null;
   let ambienceGain = null;
+  let ambienceOscillator = null; // Track the forest bird oscillator
+  let audioContext = null; // Reusable AudioContext for autoplay compliance
   let mediaRecorder = null;
   let recordedChunks = [];
   let recordTimerInterval = null;
@@ -23,6 +25,16 @@
   let podcastQueue = [];  // for play-all
   const DB_NAME = 'talky_history';
   const DB_STORE = 'generations';
+
+  // Initialize AudioContext on first user interaction (autoplay policy compliance)
+  function initAudioContext() {
+    if (!audioContext || audioContext.state === 'closed') {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+  }
 
   /* ================================================================
      1. TAB NAVIGATION
@@ -228,6 +240,7 @@
 
   generateForm.addEventListener('submit', async e => {
     e.preventDefault();
+    initAudioContext(); // ✅ FIXED: Initialize AudioContext on user interaction
     const text = textArea.value.trim();
     if (!text) { showToast('الرجاء إدخال نص للتحويل.', 'error'); return; }
 
@@ -235,6 +248,11 @@
     resultCard.style.display = 'none';
 
     try {
+      // Revoke previous object URL to prevent memory leak
+      if (audioPlayer.src && audioPlayer.src.startsWith('blob:')) {
+        URL.revokeObjectURL(audioPlayer.src);
+      }
+      
       const formData = new FormData(generateForm);
       const response = await fetch('/api/generate', { method: 'POST', body: formData });
 
@@ -359,6 +377,7 @@
 
   ambienceBtns.forEach(btn => {
     btn.addEventListener('click', () => {
+      initAudioContext(); // ✅ FIXED: Initialize AudioContext on user interaction
       ambienceBtns.forEach(b => b.classList.remove('active-ambience'));
       btn.classList.add('active-ambience');
       const type = btn.dataset.ambience;
@@ -367,16 +386,22 @@
     });
   });
 
-  function stopAmbience() {
-    if (ambienceSource) {
-      try { ambienceSource.stop(); } catch (e) {}
-      ambienceSource = null;
-    }
-    if (ambienceCtx) {
-      ambienceCtx.close().catch(() => {});
-      ambienceCtx = null;
-    }
+let ambienceOscillator = null; // Track the forest bird oscillator
+
+function stopAmbience() {
+  if (ambienceSource) {
+    try { ambienceSource.stop(); } catch (e) {}
+    ambienceSource = null;
   }
+  if (ambienceOscillator) {
+    try { ambienceOscillator.stop(); } catch (e) {}
+    ambienceOscillator = null;
+  }
+  if (ambienceCtx) {
+    ambienceCtx.close().catch(() => {});
+    ambienceCtx = null;
+  }
+}
 
   function startAmbience(type) {
     ambienceCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -427,6 +452,7 @@
       const oscGain = ambienceCtx.createGain(); oscGain.gain.value = 0.02;
       osc.connect(oscGain); oscGain.connect(ambienceCtx.destination);
       osc.start();
+      ambienceOscillator = osc; // ✅ FIXED: Store reference to stop later
     } else if (type === 'white') {
       const lp = ambienceCtx.createBiquadFilter();
       lp.type = 'lowpass'; lp.frequency.value = 3000;
