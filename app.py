@@ -1,4 +1,8 @@
 import os
+# ✅ اجبار استخدام المعالج فقط دون GPU
+os.environ['CUDA_VISIBLE_DEVICES'] = ''
+os.environ['GRADIO_CLIENT_FORCE_CPU'] = '1'
+
 import shutil
 import tempfile
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
