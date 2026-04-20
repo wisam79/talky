@@ -97,7 +97,11 @@ def main():
 
     # تعيين الـ remote URL مع التوكن مؤقتاً
     print("🔗 جارٍ ضبط عنوان الاتصال...")
-    run(f'git remote set-url origin "{authenticated_url}"', cwd=project_dir)
+    remotes = subprocess.run("git remote", shell=True, cwd=project_dir, capture_output=True, text=True).stdout
+    if "origin" in remotes:
+        run(f'git remote set-url origin "{authenticated_url}"', cwd=project_dir)
+    else:
+        run(f'git remote add origin "{authenticated_url}"', cwd=project_dir)
 
     # الرفع
     print("\n⬆️  جارٍ رفع المشروع إلى Hugging Face...")

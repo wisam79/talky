@@ -1,4 +1,4 @@
-const CACHE_NAME = 'talky-pwa-v1';
+const CACHE_NAME = 'talky-pwa-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -27,8 +27,8 @@ self.addEventListener('fetch', event => {
     caches.match(event.request)
       .then(response => {
         return response || fetch(event.request).then(fetchResponse => {
-          // Only cache static assets, not dynamic content
-          if (event.request.url.match(/\.(js|css|html|json|svg|png|jpg)$/)) {
+          // Only cache static assets and fonts, avoiding dynamic requests
+          if (event.request.url.match(/\.(js|css|html|json|svg|png|jpg|woff2?|ttf)(\?.*)?$/) || event.request.url.includes('fonts.googleapis.com') || event.request.url.includes('fonts.gstatic.com')) {
             return caches.open(CACHE_NAME).then(cache => {
               cache.put(event.request, fetchResponse.clone());
               return fetchResponse;

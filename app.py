@@ -1,11 +1,18 @@
 import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # ✅ اجبار استخدام المعالج فقط دون GPU
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 os.environ['GRADIO_CLIENT_FORCE_CPU'] = '1'
 
-import shutil
 import tempfile
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+import asyncio
+import threading
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,19 +25,36 @@ app = FastAPI(title="Talky PWA Backend")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,  # ✅ FIXED: Cannot use credentials with * origins
+    allow_credentials=False, # ✅ FIXED: Cannot use credentials with * origins
     allow_methods=["*"],
     allow_headers=["*"],
+    max_age=86400, # ✅ FIXED: Prevent double network latency by caching preflight OPTIONS
 )
 
 # تأكد من وجود مجلد static
 os.makedirs("static", exist_ok=True)
 
-# نقطة الاتصال مع OmniVoice
-client = Client("k2-fsa/OmniVoice")  # Initialize once at startup
+# Lazy initialization of OmniVoice client to avoid startup failures
+_client = None
+_client_lock = threading.Lock()
+
+def get_client():
+    global _client
+    if _client is None:
+        with _client_lock:
+            if _client is None:
+                try:
+                    hf_token = os.getenv("HF_TOKEN")
+                    if hf_token and not hf_token.strip():
+                        hf_token = None
+                    _client = Client("k2-fsa/OmniVoice", hf_token=hf_token)
+                except Exception as e:
+                    raise HTTPException(status_code=503, detail=f"OmniVoice API unavailable: {str(e)}")
+    return _client
 
 @app.post("/api/generate")
 async def generate_voice(
+    background_tasks: BackgroundTasks,
     text: str = Form(...),
     language: str = Form("Auto"),
     dialect: str = Form("Auto"),
@@ -55,9 +79,11 @@ async def generate_voice(
             if len(content) > max_size:
                 raise HTTPException(status_code=413, detail="Reference audio file too large. Maximum 10MB allowed.")
                 
-            fd, temp_audio_path = tempfile.mkstemp(suffix=".wav")
-            os.close(fd)
-            with open(temp_audio_path, "wb") as buffer:
+            ext = os.path.splitext(ref_audio.filename)[1]
+            if not ext:
+                ext = ".wav"
+            fd, temp_audio_path = tempfile.mkstemp(suffix=ext)
+            with os.fdopen(fd, "wb") as buffer:
                 buffer.write(content)
             ref_audio_input = handle_file(temp_audio_path)
         else:
@@ -72,16 +98,19 @@ async def generate_voice(
         if accent != "Auto":
             instruct_parts.append(accent.split(" / ")[0].strip())
         if dialect != "Auto":
-            instruct_parts.append(dialect.split(" / ")[1].strip())  # Dialects use Chinese part
+            parts = dialect.split(" / ")
+            instruct_parts.append(parts[1].strip() if len(parts) > 1 else parts[0].strip())
             
-        instruct = ", ".join(instruct_parts) if instruct_parts else None
+        instruct = ", ".join(instruct_parts) if instruct_parts else ""
 
-        result = client.predict(
+        client = await asyncio.to_thread(get_client)
+        result = await asyncio.to_thread(
+            client.predict,
             text,            # param_0: text
             language,        # param_1: language
             ref_audio_input, # param_2: ref_audio
-            ref_text,        # param_3: ref_text ✅ ✅ ✅ FINAL FIX: Correct order
-            instruct,        # param_4: instruct ✅ ✅ ✅ FINAL FIX: Correct order
+            ref_text,        # param_3: ref_text 
+            instruct,        # param_4: instruct 
             32,              # param_5: ns (Number of steps)
             2.0,             # param_6: gs (Guidance Scale)
             True,            # param_7: dn
@@ -102,8 +131,16 @@ async def generate_voice(
         if not output_path or not os.path.exists(output_path):
             raise HTTPException(status_code=500, detail="Failed to generate audio")
             
-        # إعادة الملف (fastapi ستقوم بقراءته)
-        # ملاحظة: الملف المؤقت القديم سيُحذف، وoutput_path مُدار بواسطة gradio_client
+        def delete_output_file(path_to_delete: str):
+            try:
+                if os.path.exists(path_to_delete):
+                    os.remove(path_to_delete)
+            except OSError:
+                pass
+
+        background_tasks.add_task(delete_output_file, output_path)
+
+        # إعادة الملف (fastapi ستقوم بقراءته وبعدها سيتم حذفه من خلال BackgroundTask)
         return FileResponse(path=output_path, media_type="audio/wav", filename="talky_output.wav")
         
     except Exception as e:
@@ -114,11 +151,18 @@ async def generate_voice(
         if temp_audio_path and os.path.exists(temp_audio_path):
             try:
                 os.remove(temp_audio_path)
-            except:
+            except OSError:
+                pass
+                
+        # تنظيف ملفات FastAPI المؤقتة
+        if ref_audio is not None and hasattr(ref_audio, "close"):
+            try:
+                await ref_audio.close()
+            except Exception:
                 pass
 
 # تقديم واجهة المستخدم كملفات ثابتة (يجب أن يتم بعد تعريف مسارات API)
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="0.0.0.0", port=7860, reload=True)
+    uvicorn.run("app:app", host="0.0.0.0", port=7860)

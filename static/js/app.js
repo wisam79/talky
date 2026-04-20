@@ -159,8 +159,10 @@
   }
 
   function handleRecordingStop() {
-    const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-    const file = new File([blob], 'recorded_voice.webm', { type: 'audio/webm' });
+    const actualMime = mediaRecorder.mimeType || 'audio/webm';
+    const ext = actualMime.includes('mp4') ? 'mp4' : (actualMime.includes('ogg') ? 'ogg' : 'webm');
+    const blob = new Blob(recordedChunks, { type: actualMime });
+    const file = new File([blob], `recorded_voice.${ext}`, { type: actualMime });
 
     // Inject into file input via DataTransfer
     const dt = new DataTransfer();
@@ -300,8 +302,9 @@
     const W = canvas.offsetWidth;
     const H = canvas.offsetHeight;
 
+    let audioCtx = null;
     try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const arrayBuffer = await blob.arrayBuffer();
       const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
       const data = audioBuffer.getChannelData(0);
@@ -347,6 +350,7 @@
       ctx.stroke();
       audioCtx.close();
     } catch (e) {
+      if (audioCtx) audioCtx.close().catch(()=>{});
       // Fallback: draw a placeholder
       const g = ctx.createLinearGradient(0, 0, canvas.offsetWidth, 0);
       g.addColorStop(0, 'rgba(168,199,250,0.3)');
@@ -386,9 +390,7 @@
     });
   });
 
-let ambienceOscillator = null; // Track the forest bird oscillator
-
-function stopAmbience() {
+  function stopAmbience() {
   if (ambienceSource) {
     try { ambienceSource.stop(); } catch (e) {}
     ambienceSource = null;
@@ -533,6 +535,13 @@ function stopAmbience() {
 
   async function renderHistory() {
     const list = document.getElementById('history-list');
+    
+    list.querySelectorAll('audio').forEach(audio => {
+      if (audio.src && audio.src.startsWith('blob:')) {
+        URL.revokeObjectURL(audio.src);
+      }
+    });
+    
     list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary);">جارٍ التحميل...</div>';
     try {
       const items = await getAllHistory();
@@ -691,6 +700,9 @@ function stopAmbience() {
     podcastLoading.style.display = 'flex';
     podcastGenerateBtn.disabled = true;
 
+    if (podcastBlobs.length > 0) {
+      podcastBlobs.forEach(b => URL.revokeObjectURL(b.url));
+    }
     podcastBlobs = [];
     podcastTracks.innerHTML = '';
     podcastResults.style.display = 'none';
@@ -711,7 +723,10 @@ function stopAmbience() {
 
       try {
         const res = await fetch('/api/generate', { method: 'POST', body: fd });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: res.statusText }));
+          throw new Error(err.detail || 'فشل الطلب');
+        }
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         podcastBlobs.push({ char, text: lineText, blob, url });
@@ -747,11 +762,33 @@ function stopAmbience() {
     podcastResults.scrollIntoView({ behavior: 'smooth' });
   });
 
-  // Play All (sequential)
+  // Play All (sequential) with overlap prevention
+  let isPlayingAll = false;
+  let activePodcastAudio = null;
+
   playAllBtn.addEventListener('click', async () => {
     if (podcastBlobs.length === 0) return;
-    for (const item of podcastBlobs) {
-      await playBlob(item.blob);
+    
+    // Toggle stop if already playing
+    if (isPlayingAll) {
+      isPlayingAll = false;
+      if (activePodcastAudio) activePodcastAudio.pause();
+      playAllBtn.innerHTML = '▶️ تشغيل الكل بالترتيب';
+      return;
+    }
+
+    isPlayingAll = true;
+    playAllBtn.textContent = '⏹ إيقاف تشغيل الكل';
+    
+    try {
+      for (const item of podcastBlobs) {
+        if (!isPlayingAll) break;
+        await playBlob(item.blob);
+      }
+    } finally {
+      isPlayingAll = false;
+      playAllBtn.innerHTML = '▶️ تشغيل الكل بالترتيب';
+      activePodcastAudio = null;
     }
   });
 
@@ -759,9 +796,14 @@ function stopAmbience() {
     return new Promise(resolve => {
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      audio.onended = resolve;
-      audio.onerror = resolve;
-      audio.play().catch(resolve);
+      activePodcastAudio = audio; // Track the playing instance
+      const cleanup = () => {
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+      audio.onended = cleanup;
+      audio.onerror = cleanup;
+      audio.play().catch(cleanup);
     });
   }
 
