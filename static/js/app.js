@@ -390,6 +390,8 @@
     });
   });
 
+  let ambienceOscillator = null; // Track the forest bird oscillator
+  
   function stopAmbience() {
   if (ambienceSource) {
     try { ambienceSource.stop(); } catch (e) {}
