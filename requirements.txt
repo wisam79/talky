@@ -1,9 +1,5 @@
 gradio_client
 fastapi
-uvicorn
+uvicorn[standard]
 python-multipart
 python-dotenv
-
-# Testing dependencies
-pytest
-httpx

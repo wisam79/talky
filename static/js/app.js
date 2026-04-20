@@ -256,7 +256,7 @@
       }
       
       const formData = new FormData(generateForm);
-      const response = await fetch('/api/generate', { method: 'POST', body: formData });
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/generate`, { method: 'POST', body: formData });
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({ detail: response.statusText }));
@@ -725,7 +725,7 @@
       fd.append('seed', 0);
 
       try {
-        const res = await fetch('/api/generate', { method: 'POST', body: fd });
+        const res = await fetch(`${API_CONFIG.BASE_URL}/api/generate`, { method: 'POST', body: fd });
         if (!res.ok) {
           const err = await res.json().catch(() => ({ detail: res.statusText }));
           throw new Error(err.detail || 'فشل الطلب');
