@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Talky Engine - محرك الصوت الذكي</title>
+  <meta name="description" content="محرك توليد الصوت الاستثنائي بتقنية OmniVoice. يدعم العربية واستنساخ الصوت ووضع البودكاست.">
+  <meta name="theme-color" content="#0D0D1A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙️</text></svg>">
+</head>
+<body>
+
+  <!-- App Bar -->
+  <header class="app-bar">
+    <div class="app-bar-logo">
+      <span class="logo-glow">🎙️</span>
+      <div class="logo-text">
+        <h1>Talky Engine</h1>
+        <span class="logo-sub">مشغّل بـ OmniVoice</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tab Navigation -->
+  <nav class="tab-nav" role="tablist">
+    <button class="tab-btn active" data-tab="generator" role="tab" aria-selected="true" id="tab-btn-generator">
+      <span class="tab-icon">🎵</span>
+      <span class="tab-label">إنشاء</span>
+    </button>
+    <button class="tab-btn" data-tab="podcast" role="tab" aria-selected="false" id="tab-btn-podcast">
+      <span class="tab-icon">🎭</span>
+      <span class="tab-label">بودكاست</span>
+    </button>
+    <button class="tab-btn" data-tab="history" role="tab" aria-selected="false" id="tab-btn-history">
+      <span class="tab-icon">📚</span>
+      <span class="tab-label">سجل</span>
+    </button>
+  </nav>
+
+  <!-- ============================== TAB 1: إنشاء الصوت ============================== -->
+  <main class="tab-content active" id="tab-generator" role="tabpanel" aria-labelledby="tab-btn-generator">
+
+    <form id="generate-form" novalidate>
+
+      <!-- Card: النص -->
+      <div class="card">
+        <div class="card-header">
+          <span>📝</span><h2>النص</h2>
+        </div>
+        <div class="input-group">
+          <textarea id="text" name="text" rows="5"
+            placeholder="أدخل النصَّ هنا... &#10;&#10;💡 للنتائج الأدق مع العربية، يُنصح بكتابة الأرقام بالكلمات. &#10;مثال: «خمسة وعشرون» بدلاً من «25»"
+            required aria-required="true"></textarea>
+          <div class="text-meta" aria-live="polite">
+            <span id="word-count">0 كلمة</span>
+            <span class="text-meta-sep">•</span>
+            <span id="duration-estimate">~ 0 ث</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card: الشخصيات الجاهزة -->
+      <div class="card">
+        <div class="card-header">
+          <span>🎭</span><h2>شخصية الصوت</h2>
+        </div>
+        <div class="presets-grid">
+          <button type="button" class="preset-btn active" data-role="Auto" data-gender="Auto" id="preset-random">
+            <span class="preset-icon">🎲</span>
+            <span class="preset-name">عشوائي</span>
+          </button>
+          <button type="button" class="preset-btn" data-role="News Anchor / 新闻广播" data-gender="Male" id="preset-anchor">
+            <span class="preset-icon">📺</span>
+            <span class="preset-name">مذيع</span>
+          </button>
+          <button type="button" class="preset-btn" data-role="Storyteller / 故事讲述" data-gender="Female" id="preset-story">
+            <span class="preset-icon">📖</span>
+            <span class="preset-name">راوية</span>
+          </button>
+          <button type="button" class="preset-btn" data-role="Voice Assistant / 语音助手" data-gender="Auto" id="preset-assistant">
+            <span class="preset-icon">🤖</span>
+            <span class="preset-name">مساعد</span>
+          </button>
+          <button type="button" class="preset-btn" data-role="Lecturer / 讲师" data-gender="Male" id="preset-lecturer">
+            <span class="preset-icon">👨‍🏫</span>
+            <span class="preset-name">محاضر</span>
+          </button>
+          <button type="button" class="preset-btn" data-role="Customer Service / 客户服务" data-gender="Female" id="preset-cs">
+            <span class="preset-icon">☎️</span>
+            <span class="preset-name">خدمة عملاء</span>
+          </button>
+        </div>
+        <!-- Hidden inputs updated by presets -->
+        <input type="hidden" id="role" name="role" value="Auto">
+        <input type="hidden" id="gender" name="gender" value="Auto">
+      </div>
+
+      <!-- Card: الإعدادات الأساسية -->
+      <div class="card">
+        <div class="card-header">
+          <span>🌐</span><h2>اللغة</h2>
+        </div>
+        <div class="input-group">
+          <select id="language" name="language" class="select-full">
+            <option value="Auto">تلقائي (Auto)</option>
+            <option value="Arabic">العربية</option>
+            <option value="English">الإنجليزية</option>
+            <option value="Chinese">الصينية</option>
+            <option value="French">الفرنسية</option>
+            <option value="Spanish">الإسبانية</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Card: الصوت المرجعي -->
+      <div class="card">
+        <div class="card-header">
+          <span>🎤</span><h2>صوت مرجعي <span class="optional-badge">اختياري</span></h2>
+        </div>
+        <p class="hint-text">ارفع أو سجّل صوتاً مرجعياً لاستنساخه في التوليد (Zero-Shot Cloning)</p>
+
+        <div class="ref-audio-row">
+          <label class="ref-action-btn" id="drop-zone" for="ref_audio">
+            <span>📁 رفع ملف</span>
+            <input type="file" id="ref_audio" name="ref_audio" accept="audio/*">
+          </label>
+          <button type="button" class="ref-action-btn record-btn" id="record-btn" aria-label="تسجيل صوت مرجعي">
+            <span id="record-btn-text">🎤 تسجيل</span>
+          </button>
+        </div>
+
+        <div class="file-name-badge" id="file-name-badge" style="display:none;"></div>
+
+        <!-- Recording Indicator -->
+        <div class="recording-indicator" id="recording-indicator" style="display:none;" role="status" aria-live="assertive">
+          <span class="rec-dot"></span>
+          <span>جارٍ التسجيل...</span>
+          <span id="rec-timer" class="rec-timer">00:00</span>
+          <button type="button" id="stop-record-btn" class="stop-rec-btn">⏹ إيقاف</button>
+        </div>
+
+        <!-- Ref Text (appears when audio selected) -->
+        <div class="ref-text-container" id="ref-text-group" style="display:none;">
+          <div class="input-group" style="margin-top:14px;">
+            <label for="ref_text">📜 النص المنطوق في المقطع (يرفع دقة الاستنساخ بشكل كبير 🎯)</label>
+            <textarea id="ref_text" name="ref_text" rows="3"
+              placeholder="اكتب هنا بالضبط ما قيل في المقطع الصوتي المرجعي..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card: إعدادات متقدمة -->
+      <div class="card collapsible-card" id="advanced-card">
+        <button type="button" class="card-toggle" id="advanced-toggle" aria-expanded="false" aria-controls="advanced-content">
+          <div class="card-header" style="margin-bottom:0;">
+            <span>⚙️</span><h2>إعدادات متقدمة</h2>
+          </div>
+          <span class="toggle-chevron" id="toggle-chevron">▼</span>
+        </button>
+        <div class="collapsible-content" id="advanced-content" style="display:none;">
+          <div class="options-grid">
+            <div class="input-group">
+              <label for="dialect">اللهجة (Dialect)</label>
+              <select id="dialect" name="dialect">
+                <option value="Auto">تلقائي</option>
+                <option value="Egyptian">مصرية</option>
+                <option value="Levantine">شامية</option>
+                <option value="Gulf">خليجية</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label for="accent">اللكنة (Accent)</label>
+              <select id="accent" name="accent">
+                <option value="Auto">تلقائي</option>
+                <option value="American Accent / 美式口音">أمريكية</option>
+                <option value="British Accent / 英国口音">بريطانية</option>
+                <option value="Indian Accent / 印度口音">هندية</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label for="seed-input">بصمة التنغيم (Seed)</label>
+              <div class="seed-row">
+                <input type="number" id="seed-input" name="seed" value="0" min="0" max="9999" class="seed-input">
+                <button type="button" id="random-seed-btn" class="icon-btn" title="توليد رقم عشوائي" aria-label="رقم عشوائي">🎲</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generate Button -->
+      <button type="submit" class="generate-btn" id="submit-btn" aria-live="polite">
+        <span class="btn-text">توليد الصوت 🚀</span>
+        <span class="btn-loading" aria-hidden="true" style="display:none;">
+          <span class="btn-spinner"></span>
+          جارٍ التوليد...
+        </span>
+      </button>
+
+    </form>
+
+    <!-- Result Card -->
+    <div class="card result-card" id="result-card" style="display:none;" aria-live="polite">
+      <div class="card-header">
+        <span>🎧</span>
+        <h2>النتيجة</h2>
+        <button id="download-btn" class="action-icon-btn" title="تحميل الملف الصوتي" aria-label="تحميل">⬇️ تحميل</button>
+      </div>
+
+      <!-- Waveform Visualizer -->
+      <canvas id="waveform-canvas" class="waveform-canvas" aria-label="مخطط موجة الصوت"></canvas>
+
+      <!-- Audio Player -->
+      <audio id="audio-player" controls preload="auto" style="width:100%;margin-top:8px;"></audio>
+
+      <!-- Speed Control -->
+      <div class="speed-control">
+        <label for="speed-slider">⚡ السرعة</label>
+        <input type="range" id="speed-slider" min="0.5" max="2.0" step="0.1" value="1.0"
+          class="speed-slider" aria-label="سرعة التشغيل">
+        <span id="speed-display" class="speed-badge">1.0x</span>
+      </div>
+
+      <!-- Ambience -->
+      <div class="ambience-section">
+        <div class="ambience-label">🌈 مؤثر بيئي (يعزف مع الصوت)</div>
+        <div class="ambience-row">
+          <button class="ambience-btn active-ambience" data-ambience="none" aria-label="بلا مؤثر">🔇 بلا</button>
+          <button class="ambience-btn" data-ambience="rain" aria-label="صوت المطر">🌧️ مطر</button>
+          <button class="ambience-btn" data-ambience="cafe" aria-label="ضجيج مقهى">☕ مقهى</button>
+          <button class="ambience-btn" data-ambience="forest" aria-label="أصوات الطبيعة">🌿 طبيعة</button>
+          <button class="ambience-btn" data-ambience="white" aria-label="ضوضاء بيضاء هادئة">☁️ هدوء</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ============================== TAB 2: البودكاست ============================== -->
+  <main class="tab-content" id="tab-podcast" style="display:none;" role="tabpanel" aria-labelledby="tab-btn-podcast">
+
+    <div class="card">
+      <div class="card-header">
+        <span>🎭</span><h2>استوديو البودكاست</h2>
+      </div>
+      <p class="hint-text">
+        اكتب الحوار بصيغة <code>اسم الشخصية: النص</code> وسيتم توليد صوت مخصص لكل شخصية تلقائياً.
+      </p>
+      <div class="podcast-example">
+        <span>مثال:</span>
+        <code>أحمد: مرحبا بكم في برنامجنا.<br>سارة: معنا اليوم ضيف مميز.<br>أحمد: نعم، فلنبدأ.</code>
+      </div>
+
+      <div class="input-group" style="margin-top:16px;">
+        <textarea id="podcast-text" rows="10" aria-label="نص الحوار"
+          placeholder="أحمد: مرحبا بكم في البرنامج.&#10;سارة: شكراً، معنا اليوم ضيف مميز.&#10;أحمد: نعم، فلنبدأ على الفور."></textarea>
+      </div>
+
+      <!-- Character Assignments (Built Dynamically) -->
+      <div id="character-assignments" aria-live="polite"></div>
+
+      <button type="button" class="generate-btn" id="podcast-generate-btn" style="margin-top:16px;">
+        <span class="podcast-btn-text">🎭 توليد البودكاست</span>
+        <span class="podcast-loading" style="display:none;">
+          <span class="btn-spinner"></span>
+          جارٍ التوليد... <span id="podcast-progress"></span>
+        </span>
+      </button>
+    </div>
+
+    <!-- Podcast Results -->
+    <div class="card" id="podcast-results" style="display:none;">
+      <div class="card-header">
+        <span>🎧</span><h2>مقاطع البودكاست</h2>
+      </div>
+      <div id="podcast-tracks" class="podcast-tracks"></div>
+      <button type="button" class="generate-btn" id="play-all-btn" style="margin-top:16px;background:linear-gradient(135deg,#1A5C52,#0A8C7A);">
+        ▶️ تشغيل الكل بالترتيب
+      </button>
+    </div>
+
+  </main>
+
+  <!-- ============================== TAB 3: السجل ============================== -->
+  <main class="tab-content" id="tab-history" style="display:none;" role="tabpanel" aria-labelledby="tab-btn-history">
+
+    <div class="card">
+      <div class="card-header">
+        <span>📚</span><h2>سجل الإنشاءات</h2>
+        <button id="clear-history-btn" class="danger-icon-btn" title="مسح السجل كاملاً" aria-label="مسح السجل">🗑️ مسح</button>
+      </div>
+      <p class="hint-text">يُحفظ السجل محلياً على جهازك ويصل إليه حتى بدون إنترنت.</p>
+      <div id="history-list" aria-live="polite">
+        <div class="empty-state">
+          <div class="empty-icon">🎵</div>
+          <p>لا توجد إنشاءات بعد.</p>
+          <p class="empty-sub">ابدأ بتوليد أول مقطع صوتي!</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+  <script src="js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
