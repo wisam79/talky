@@ -1,7 +1,7 @@
 # AGENTS.md — Talky Engine
 
 > ملف الوكيل الشامل: يشرح المشروع، الأخطاء المكتشفة والمُصلحة، النشر، الاختبار، والمستقبل.
-> آخر تحديث: 2026-10-10
+> آخر تحديث: 2026-10-13
 
 ---
 
@@ -262,7 +262,7 @@ node --test tests_js/*.test.js
 - **`.env`**: غير متتبَّع في git ✅ (التوكن آمن)
 - **`hf auth whoami`**: `wisam99` ✅
 - **CORS**: OmniVoice يسمح صريحاً لـ `https://wisam99.github.io` و `https://wisam99-talky.hf.space` ✅
-- **الـ Space القديم**: PAUSED بسبب "Flagged as abusive" — يجب مراجعة السبب مع HF (ربما استخدام CPU/GPU مفرط في أبريل)
+- **الـ Space**: `wisam99/talky` كان PAUSED وأُعيد تشغيله عبر `upload_folder` في 2026-10-13 (RUNNING, sdk: static, app_file: index.html).
 - **الحد الزمني**: 180s (JS) مقابل 240s (باكند) — غير متناسق
 - **الحد الأقصى للنص**: 5000 حرف (باكند) مقابل تقسيم 1200 حرف (فرونتند)
 
@@ -271,11 +271,21 @@ node --test tests_js/*.test.js
 ## 10. روابط سريعة
 
 - **الفرونتند (GitHub Pages)**: `https://wisam99.github.io/talky/`
-- **HF Space الجديد**: `https://wisam99-talky-pwa.hf.space`
-- **HF Space القديم**: `https://wisam99-talky.hf.space` (موقوف)
+- **HF Space**: `https://wisam99-talky.hf.space` (RUNNING، static)
 - **OmniVoice**: `https://k2-fsa-omnivoice.hf.space`
 - **API info**: `https://k2-fsa-omnivoice.hf.space/gradio_api/info`
 
 ---
 
-*هذا الملف يُحدَّث مع كل تغيير جوهري. آخر مراجعة شاملة: 2026-10-10.*
+*آخر تحديث: 2026-10-13*
+## 11. تحديث 2026-10-13 — backend proxy + UI polish
+
+**مُنجز:**
+- `config.js` تحوّل إلى `TALKY_CONFIG` قوي: يفهم `?api=` للاختبار، يميز placeholder، ويعرّف `directMode`.
+- `app.js`: مسار توليد مزدوج — `generateVoiceViaBackend()` عند `apiBase` + `generateVoiceGradio()` كاحتياطي؛ نفس الشيء للبودكاست؛ شارة حالة الباكند؛ hint للمرجع؛ حراس null لجميع الـ listeners.
+- الباكند جاهز كـ proxy (HF_TOKEN + rate-limit 20/3600 + Retry-After) — يحتاج فقط `RENDER_URL` أو `?api=` لتفعيله.
+- `vendor.js` أُعيد بناؤه (Dexie + Zod).
+- تنظيف git: 1763 ملف `node_modules` + `__pycache__` أُزيلت من التتبع (17812→~40 ملف متتبع).
+- إصلاح CI: `node --test` glob + إزالة cache المتضارب.
+- HF Space `wisam99/talky` أُعيد تشغيله (was PAUSED) ورفعه عبر `upload_folder`; GitHub Pages ينشر تلقائياً 200.
+- الاختبارات: 66 pytest + 38 node — جميعها PASS محلياً.
