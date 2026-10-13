@@ -1,20 +1,24 @@
-const CACHE_NAME = 'talky-pwa-v4';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/css/style.css',
-  '/js/gradio_api.js',
-  '/js/app.js',
-  '/manifest.json'
+const CACHE_NAME = 'talky-pwa-v9';
+const ASSET_PATHS = [
+  '',
+  'index.html',
+  'css/style.css',
+  'css/apple-hig.css',
+  'js/gradio_api.js',
+  'js/app.js',
+  'js/vendor.js',
+  'manifest.json',
+  'icons/icon-192.png',
+  'icons/icon-512.png'
 ];
 
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(ASSETS_TO_CACHE);
-      })
+      .then(cache => cache.addAll(
+        ASSET_PATHS.map(path => new URL(path, self.registration.scope).toString())
+      ))
   );
 });
 
@@ -25,8 +29,15 @@ self.addEventListener('fetch', event => {
   // Don't cache external Gradio API calls (audio generation)
   if (event.request.url.includes('hf.space')) return;
 
+  const isDocument = event.request.mode === 'navigate' ||
+    event.request.destination === 'document';
   event.respondWith(
-    caches.match(event.request)
+    (isDocument ? fetch(event.request).then(fetchResponse => {
+      if (fetchResponse.ok) {
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, fetchResponse.clone()));
+      }
+      return fetchResponse;
+    }).catch(() => caches.match(event.request)) : caches.match(event.request)
       .then(response => {
         return response || fetch(event.request).then(fetchResponse => {
           // Only cache static assets and fonts, avoiding dynamic requests
@@ -44,7 +55,7 @@ self.addEventListener('fetch', event => {
             headers: { 'Content-Type': 'text/plain' }
           });
         });
-      })
+      }))
   );
 });
 

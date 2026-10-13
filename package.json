@@ -1,5 +1,19 @@
 {
+  "name": "talky-tests",
+  "private": true,
+  "description": "Frontend test harness for Talky (jsdom + node:test)",
+  "scripts": {
+    "test": "node --test tests_js/*.test.js",
+    "test:api": "node --test tests_js/gradio_api.test.js",
+    "test:dom": "node --test tests_js/app_dom.test.js",
+    "build:frontend": "node scripts/build_frontend.mjs"
+  },
   "dependencies": {
-    "jsdom": "^29.0.2"
+    "dexie": "^4.4.6",
+    "jsdom": "^29.0.2",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.11"
   }
 }

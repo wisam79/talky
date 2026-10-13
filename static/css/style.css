@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
-
 /* ============================================================
    DESIGN TOKENS — Material Design 3 + Glassmorphism Dark
    ============================================================ */
@@ -115,6 +113,27 @@ body {
 }
 
 /* ============================================================
+   INLINE SVG ICONS (Lucide-style sprite)
+   ============================================================ */
+.ico {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: -0.15em;
+  flex-shrink: 0;
+}
+.ico-sm { width: 0.95em; height: 0.95em; }
+.ico-xs { width: 0.8em; height: 0.8em; vertical-align: -0.1em; }
+.label-ico { margin-inline-end: 4px; }
+.btn-ico { margin-inline-end: 6px; }
+.history-role-badge .ico { margin-inline-end: 3px; }
+
+/* ============================================================
    TAB NAVIGATION
    ============================================================ */
 .tab-nav {
@@ -196,6 +215,8 @@ body {
   padding: 18px 16px;
   box-shadow: var(--shadow-md);
   transition: var(--transition);
+  content-visibility: auto;
+  contain-intrinsic-size: 0 180px;
 }
 
 .card:hover {
@@ -283,6 +304,18 @@ textarea {
   font-size: 12px;
   color: var(--text-secondary);
   padding: 4px 2px;
+}
+
+.text-limit-warning { color: var(--tertiary); }
+.text-limit-error { color: var(--error); font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 .text-meta-sep { opacity: 0.4; }
 
@@ -376,7 +409,8 @@ textarea {
   animation: pulse-border 1.2s ease-in-out infinite;
 }
 
-.file-name-badge {
+.file-name-badge,
+.file-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1012,3 +1046,100 @@ audio {
   .tab-content { padding: 20px; gap: 16px; }
   .card { padding: 22px 20px; }
 }
+
+/* ============================================================
+   PHASE 1 ADDITIONS — cancel / progress / sliders
+   ============================================================ */
+.generate-row { display: flex; gap: 10px; }
+.generate-row .generate-btn { flex: 1; }
+.generate-row .cancel-btn { flex: 0 0 120px; }
+.progress-track {
+  height: 8px; border-radius: 100px; overflow: hidden;
+  background: rgba(168,199,250,0.12); margin-top: 10px;
+}
+.progress-fill {
+  height: 100%; width: 5%; border-radius: 100px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width 0.5s ease;
+}
+.range-val {
+  font-size: 12px; font-weight: 700; color: var(--primary);
+  background: rgba(168,199,250,0.12); padding: 2px 10px; border-radius: 100px;
+}
+
+/* ============================================================
+   PHASE 3 ADDITIONS — light theme / share / favorites / upload
+   ============================================================ */
+.app-bar { display: flex; align-items: center; justify-content: space-between; }
+.theme-toggle { font-size: 20px; }
+.result-actions { display: flex; gap: 8px; }
+
+/* Light theme overrides */
+[data-theme="light"] {
+  --bg:            #F4F6FB;
+  --bg-surface:    #FFFFFF;
+  --surface:       rgba(255, 255, 255, 0.9);
+  --surface-2:     rgba(240, 244, 255, 0.95);
+  --surface-hover: rgba(230, 238, 255, 1);
+  --border:        rgba(40, 80, 180, 0.15);
+  --border-focus:  rgba(40, 80, 180, 0.5);
+  --primary:       #1A56DB;
+  --primary-dim:   #4A7DD4;
+  --on-primary:    #FFFFFF;
+  --text:          #1A1C23;
+  --text-secondary:#4B5563;
+  --text-hint:     #9CA3AF;
+  --shadow-sm:     0 2px 8px rgba(30,60,120,0.08);
+  --shadow-md:     0 4px 24px rgba(30,60,120,0.12);
+  --shadow-lg:     0 8px 48px rgba(30,60,120,0.16);
+  --shadow-glow:   0 0 24px rgba(26,86,219,0.12);
+}
+[data-theme="light"] body {
+  background-image:
+    radial-gradient(ellipse at 10% 10%, rgba(66, 99, 235, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 90% 80%, rgba(168, 100, 250, 0.06) 0%, transparent 50%);
+}
+[data-theme="light"] .app-bar { background: rgba(255,255,255,0.85); }
+[data-theme="light"] .logo-text h1 {
+  background: linear-gradient(135deg, #1A56DB, #7C3AED);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+[data-theme="light"] .toast.error { background: rgba(255,235,235,0.97); color: #B91C1C; border-color: rgba(185,28,28,0.3); }
+[data-theme="light"] .toast.success { background: rgba(220,252,231,0.97); color: #047857; border-color: rgba(4,120,87,0.3); }
+[data-theme="light"] .toast.info { background: rgba(219,234,254,0.97); color: #1D4ED8; border-color: rgba(29,78,216,0.3); }
+[data-theme="light"] .tab-btn { color: var(--text-secondary); }
+[data-theme="light"] .tab-btn.active { color: var(--on-primary); background: var(--primary); }
+[data-theme="light"] .preset-btn, [data-theme="light"] .ref-action-btn,
+[data-theme="light"] .ambience-btn, [data-theme="light"] .action-icon-btn,
+[data-theme="light"] .danger-icon-btn, [data-theme="light"] .icon-btn,
+[data-theme="light"] .seed-input, [data-theme="light"] select, [data-theme="light"] textarea,
+[data-theme="light"] input[type="text"], [data-theme="light"] input[type="search"], [data-theme="light"] input[type="number"] {
+  background: #FFFFFF; color: var(--text); border-color: var(--border);
+}
+[data-theme="light"] .preset-btn.active, [data-theme="light"] .ambience-btn.active-ambience { border-color: var(--primary); }
+[data-theme="light"] .waveform-canvas, [data-theme="light"] .podcast-track,
+[data-theme="light"] .history-item, [data-theme="light"] .character-assignment,
+[data-theme="light"] .podcast-example, [data-theme="light"] .empty-state { background: #FFFFFF; border-color: var(--border); }
+[data-theme="light"] .modal-card { background: #FFFFFF; }
+[data-theme="light"] .progress-track { background: rgba(26,86,219,0.12); }
+[data-theme="light"] .range-val { color: var(--primary); background: rgba(26,86,219,0.1); }
+
+.fav-btn { color: var(--text-secondary); }
+.fav-btn.active-fav { color: #FBBF24; border-color: rgba(251,191,36,0.4); }
+.upload-doc-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+
+/* Custom modal (accessible replacement for confirm/prompt) */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1200;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-card {
+  width: 100%; max-width: 380px;
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 22px;
+  box-shadow: var(--shadow-lg); animation: fadeInUp 0.25s ease-out;
+}
+.modal-card h3 { font-size: 17px; font-weight: 800; margin-bottom: 8px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 16px; }

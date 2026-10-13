@@ -1,6 +1,9 @@
 import pytest
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from fastapi.testclient import TestClient
-from app import app
+from apps.backend.app import app
 
 client = TestClient(app)
 
@@ -8,7 +11,7 @@ def test_read_root():
     """Test root endpoint returns static content"""
     response = client.get("/")
     assert response.status_code == 200
-    assert b"Talky Engine" in response.content
+    assert b"Talky" in response.content
 
 def test_generate_empty_text():
     """Test generate endpoint with empty text returns validation error"""
@@ -44,9 +47,55 @@ def test_generate_all_parameters():
         "role": "Storyteller / 故事讲述",
         "accent": "American Accent / 美式口音",
         "ref_text": "",
-        "seed": 1234
+        "speed": 1.0,
+        "steps": 32,
+        "guidance": 2.0,
     })
     assert response.status_code in [200, 500, 503]
+
+def test_generate_text_too_long():
+    """Text over 5000 chars must be rejected with 400 before touching OmniVoice"""
+    response = client.post("/api/generate", data={"text": "أ" * 5001})
+    assert response.status_code == 400
+    assert "too long" in response.json()["detail"].lower()
+
+def test_generate_unsupported_audio_type():
+    """Non-audio uploads must be rejected with 415"""
+    response = client.post(
+        "/api/generate",
+        data={"text": "مرحبا"},
+        files={"ref_audio": ("evil.txt", b"not audio", "text/plain")},
+    )
+    assert response.status_code == 415
+
+def test_generate_oversize_audio():
+    """Uploads over 10MB must be rejected with 413"""
+    big = b"\x00" * (10 * 1024 * 1024 + 1)
+    response = client.post(
+        "/api/generate",
+        data={"text": "مرحبا"},
+        files={"ref_audio": ("big.wav", big, "audio/wav")},
+    )
+    assert response.status_code == 413
+
+def test_rate_limit_headers():
+    """Exhausting the limit must return 429 with Retry-After"""
+    import apps.backend.app as app_module
+    old_max = app_module._RATE_MAX
+    old_window = app_module._RATE_WINDOW
+    app_module._RATE_MAX = 1
+    app_module._RATE_WINDOW = 3600
+    app_module._rate_hits.clear()
+    try:
+        # consumes the single allowed hit (may 200/500/503 depending on backend)
+        client.post("/api/generate", data={"text": "واحد"})
+        r = client.post("/api/generate", data={"text": "اثنان"})
+        assert r.status_code == 429
+        assert "Retry-After" in r.headers
+    finally:
+        app_module._RATE_MAX = old_max
+        app_module._RATE_WINDOW = old_window
+        app_module._rate_hits.clear()
 
 def test_cors_headers():
     """Test CORS headers are properly set"""

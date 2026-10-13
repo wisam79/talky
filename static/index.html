@@ -2,45 +2,96 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Talky Engine - محرك الصوت الذكي</title>
-  <meta name="description" content="محرك توليد الصوت الاستثنائي بتقنية OmniVoice. يدعم العربية واستنساخ الصوت ووضع البودكاست.">
-  <meta name="theme-color" content="#0D0D1A">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Talky — تحويل النص إلى صوت</title>
+  <meta name="description" content="حوّل النص العربي إلى صوت طبيعي، استنسخ صوتك، وأنتج بودكاست متعدد الشخصيات.">
+  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Talky">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/apple-hig.css">
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙️</text></svg>">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <script>
+    window.TALKY_API_URL = "RENDER_BACKEND_URL_PLACEHOLDER";
+  </script>
 </head>
 <body>
+
+  <!-- ═══════════ ICON SPRITE (single source of truth for all icons) ═══════════ -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <symbol id="i-music" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></symbol>
+    <symbol id="i-wave" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="10" x2="2" y2="14"/><line x1="6" y1="6" x2="6" y2="18"/><line x1="10" y1="3" x2="10" y2="21"/><line x1="14" y1="8" x2="14" y2="16"/><line x1="18" y1="5" x2="18" y2="19"/><line x1="22" y1="10" x2="22" y2="14"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+    <symbol id="i-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></symbol>
+    <symbol id="i-headphones" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="i-dice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></symbol>
+    <symbol id="i-book-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+    <symbol id="i-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></symbol>
+    <symbol id="i-presentation" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="M7 21l5-5 5 5"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/><path d="M19 15l.7 2.1L22 18l-2.3.9L19 21l-.7-2.1L16 18l2.3-.9z"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="i-volume-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></symbol>
+    <symbol id="i-rain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16" y1="13" x2="16" y2="21"/><line x1="8" y1="13" x2="8" y2="21"/><line x1="12" y1="15" x2="12" y2="23"/><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"/></symbol>
+    <symbol id="i-coffee" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></symbol>
+    <symbol id="i-disc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  </svg>
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
   <!-- App Bar -->
   <header class="app-bar">
     <div class="app-bar-logo">
-      <span class="logo-glow">🎙️</span>
+      <span class="logo-glow" aria-hidden="true"><svg class="ico"><use href="#i-disc"/></svg></span>
       <div class="logo-text">
-        <h1>Talky Engine</h1>
-        <span class="logo-sub">مشغّل بـ OmniVoice</span>
+        <h1>Talky</h1>
+        <span class="logo-sub">تحويل النص إلى صوت</span>
       </div>
     </div>
+    <button id="theme-toggle" class="icon-btn theme-toggle" title="تبديل المظهر" aria-label="تبديل المظهر الفاتح والداكن">
+      <svg id="theme-icon" class="ico" aria-hidden="true"><use href="#i-moon"/></svg>
+    </button>
   </header>
 
   <!-- Tab Navigation -->
   <nav class="tab-nav" role="tablist">
     <button class="tab-btn active" data-tab="generator" role="tab" aria-selected="true" id="tab-btn-generator" aria-controls="tab-generator">
-      <span class="tab-icon" aria-hidden="true">🎵</span>
+      <span class="tab-icon" aria-hidden="true"><svg class="ico"><use href="#i-music"/></svg></span>
       <span class="tab-label">إنشاء</span>
     </button>
     <button class="tab-btn" data-tab="podcast" role="tab" aria-selected="false" id="tab-btn-podcast" aria-controls="tab-podcast">
-      <span class="tab-icon" aria-hidden="true">🎭</span>
+      <span class="tab-icon" aria-hidden="true"><svg class="ico"><use href="#i-wave"/></svg></span>
       <span class="tab-label">بودكاست</span>
     </button>
     <button class="tab-btn" data-tab="history" role="tab" aria-selected="false" id="tab-btn-history" aria-controls="tab-history">
-      <span class="tab-icon" aria-hidden="true">📚</span>
+      <span class="tab-icon" aria-hidden="true"><svg class="ico"><use href="#i-book"/></svg></span>
       <span class="tab-label">سجل</span>
     </button>
   </nav>
@@ -53,16 +104,23 @@
       <!-- Card: النص -->
       <div class="card">
         <div class="card-header">
-          <span>📝</span><h2>النص</h2>
+          <span class="card-header-icon" aria-hidden="true"><svg class="ico"><use href="#i-file-text"/></svg></span><h2>النص</h2>
         </div>
         <div class="input-group">
-          <textarea id="text" name="text" rows="5"
-            placeholder="أدخل النصَّ هنا... &#10;&#10;💡 للنتائج الأدق مع العربية، يُنصح بكتابة الأرقام بالكلمات. &#10;مثال: «خمسة وعشرون» بدلاً من «25»"
+          <textarea id="text" name="text" rows="5" maxlength="5000"
+            placeholder="أدخل النصَّ هنا... &#10;&#10;للنتائج الأدق مع العربية، يُنصح بكتابة الأرقام بالكلمات. &#10;مثال: «خمسة وعشرون» بدلاً من «25»"
             required aria-required="true"></textarea>
+          <div class="upload-doc-row">
+            <label for="doc-upload" class="action-icon-btn" title="استيراد نص من ملف"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-file"/></svg> استيراد TXT/MD</label>
+            <input type="file" id="doc-upload" accept=".txt,.md,.srt,.vtt,text/plain" hidden>
+            <span id="doc-name-badge" class="file-badge" style="display:none;"></span>
+          </div>
           <div class="text-meta" aria-live="polite">
             <span id="word-count">0 كلمة</span>
             <span class="text-meta-sep">•</span>
             <span id="duration-estimate">~ 0 ث</span>
+            <span class="text-meta-sep">•</span>
+            <span id="char-count">0/5000</span>
           </div>
         </div>
       </div>
@@ -70,48 +128,52 @@
       <!-- Card: الشخصيات الجاهزة -->
       <div class="card">
         <div class="card-header">
-          <span>🎭</span><h2>شخصية الصوت</h2>
+          <span class="card-header-icon" aria-hidden="true"><svg class="ico"><use href="#i-user"/></svg></span><h2>شخصية الصوت</h2>
         </div>
         <div class="presets-grid">
           <button type="button" class="preset-btn active" data-role="Auto" data-gender="Auto" id="preset-random">
-            <span class="preset-icon">🎲</span>
+            <span class="preset-icon"><svg class="ico"><use href="#i-dice"/></svg></span>
             <span class="preset-name">عشوائي</span>
           </button>
           <button type="button" class="preset-btn" data-role="News Anchor / 新闻广播" data-gender="Male" id="preset-anchor">
-            <span class="preset-icon">📺</span>
+            <span class="preset-icon"><svg class="ico"><use href="#i-monitor"/></svg></span>
             <span class="preset-name">مذيع</span>
           </button>
           <button type="button" class="preset-btn" data-role="Storyteller / 故事讲述" data-gender="Female" id="preset-story">
-            <span class="preset-icon">📖</span>
+            <span class="preset-icon"><svg class="ico"><use href="#i-book-open"/></svg></span>
             <span class="preset-name">راوية</span>
           </button>
           <button type="button" class="preset-btn" data-role="Voice Assistant / 语音助手" data-gender="Auto" id="preset-assistant">
-            <span class="preset-icon">🤖</span>
+            <span class="preset-icon"><svg class="ico"><use href="#i-bot"/></svg></span>
             <span class="preset-name">مساعد</span>
           </button>
           <button type="button" class="preset-btn" data-role="Lecturer / 讲师" data-gender="Male" id="preset-lecturer">
-            <span class="preset-icon">👨‍🏫</span>
+            <span class="preset-icon"><svg class="ico"><use href="#i-presentation"/></svg></span>
             <span class="preset-name">محاضر</span>
           </button>
           <button type="button" class="preset-btn" data-role="Customer Service / 客户服务" data-gender="Female" id="preset-cs">
-            <span class="preset-icon">☎️</span>
+            <span class="preset-icon"><svg class="ico"><use href="#i-phone"/></svg></span>
             <span class="preset-name">خدمة عملاء</span>
           </button>
         </div>
         <!-- Hidden inputs updated by presets -->
         <input type="hidden" id="role" name="role" value="Auto">
         <input type="hidden" id="gender" name="gender" value="Auto">
+        <div class="upload-doc-row">
+          <button type="button" id="save-fav-btn" class="action-icon-btn" title="حفظ التشكيلة الحالية كمفضلة"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-star"/></svg> حفظ كمفضلة</button>
+        </div>
+        <div id="fav-list" class="presets-grid" style="margin-top:10px;" aria-live="polite"></div>
       </div>
 
       <!-- Card: الإعدادات الأساسية -->
       <div class="card">
         <div class="card-header">
-          <span>🌐</span><h2>اللغة</h2>
+          <span class="card-header-icon" aria-hidden="true"><svg class="ico"><use href="#i-globe"/></svg></span><h2>اللغة</h2>
         </div>
         <div class="input-group">
           <select id="language" name="language" class="select-full">
             <option value="Auto">تلقائي (Auto)</option>
-            <option value="Arabic">العربية</option>
+            <option value="Standard Arabic">العربية (Standard Arabic)</option>
             <option value="English">الإنجليزية</option>
             <option value="Chinese">الصينية</option>
             <option value="French">الفرنسية</option>
@@ -123,17 +185,18 @@
       <!-- Card: الصوت المرجعي -->
       <div class="card">
         <div class="card-header">
-          <span>🎤</span><h2>صوت مرجعي <span class="optional-badge">اختياري</span></h2>
+          <span class="card-header-icon" aria-hidden="true"><svg class="ico"><use href="#i-mic"/></svg></span><h2>صوت مرجعي <span class="optional-badge">اختياري</span></h2>
         </div>
-        <p class="hint-text">ارفع أو سجّل صوتاً مرجعياً لاستنساخه في التوليد (Zero-Shot Cloning)</p>
+        <p class="hint-text">ارفع أو سجّل صوتاً مرجعياً لاستنساخه في التوليد (Zero-Shot Cloning) — يُحسّن النتيجة كثيراً لكنه ليس إجبارياً.</p>
+        <div id="ref-audio-hint" class="hint-text" style="display:none;color:var(--tertiary);margin-top:6px;">💡 بدون صوت مرجعي سيُستخدم صوت افتراضي. للحصول على استنساخ دقيق ارفع مقطعاً قصيراً (5–15 ث) مع نصه.</div>
 
         <div class="ref-audio-row">
           <label class="ref-action-btn" id="drop-zone" for="ref_audio">
-            <span>📁 رفع ملف</span>
+            <span><svg class="ico ico-sm" aria-hidden="true"><use href="#i-folder"/></svg> رفع ملف</span>
             <input type="file" id="ref_audio" name="ref_audio" accept="audio/*">
           </label>
           <button type="button" class="ref-action-btn record-btn" id="record-btn" aria-label="تسجيل صوت مرجعي">
-            <span id="record-btn-text">🎤 تسجيل</span>
+            <span id="record-btn-text"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-mic"/></svg> تسجيل</span>
           </button>
         </div>
 
@@ -144,13 +207,13 @@
           <span class="rec-dot"></span>
           <span>جارٍ التسجيل...</span>
           <span id="rec-timer" class="rec-timer">00:00</span>
-          <button type="button" id="stop-record-btn" class="stop-rec-btn">⏹ إيقاف</button>
+          <button type="button" id="stop-record-btn" class="stop-rec-btn"><svg class="ico ico-xs" aria-hidden="true"><use href="#i-stop"/></svg> إيقاف</button>
         </div>
 
         <!-- Ref Text (appears when audio selected) -->
         <div class="ref-text-container" id="ref-text-group" style="display:none;">
           <div class="input-group" style="margin-top:14px;">
-            <label for="ref_text">📜 النص المنطوق في المقطع (يرفع دقة الاستنساخ بشكل كبير 🎯)</label>
+            <label for="ref_text">النص المنطوق في المقطع (يرفع دقة الاستنساخ بشكل كبير)</label>
             <textarea id="ref_text" name="ref_text" rows="3"
               placeholder="اكتب هنا بالضبط ما قيل في المقطع الصوتي المرجعي..."></textarea>
           </div>
@@ -161,7 +224,7 @@
       <div class="card collapsible-card" id="advanced-card">
         <button type="button" class="card-toggle" id="advanced-toggle" aria-expanded="false" aria-controls="advanced-content">
           <div class="card-header" style="margin-bottom:0;">
-            <span>⚙️</span><h2>إعدادات متقدمة</h2>
+            <span class="card-header-icon" aria-hidden="true"><svg class="ico"><use href="#i-sliders"/></svg></span><h2>إعدادات متقدمة</h2>
           </div>
           <span class="toggle-chevron" id="toggle-chevron">▼</span>
         </button>
@@ -186,33 +249,50 @@
               </select>
             </div>
             <div class="input-group">
-              <label for="seed-input">بصمة التنغيم (Seed)</label>
-              <div class="seed-row">
-                <input type="number" id="seed-input" name="seed" value="0" min="0" max="9999" class="seed-input">
-                <button type="button" id="random-seed-btn" class="icon-btn" title="توليد رقم عشوائي" aria-label="توليد رقم عشوائي"><span aria-hidden="true">🎲</span></button>
-              </div>
+              <label for="speed-input"><svg class="ico ico-sm label-ico" aria-hidden="true"><use href="#i-zap"/></svg> سرعة الصوت <span id="speed-val" class="range-val">1.0x</span></label>
+              <input type="range" id="speed-input" name="speed" min="0.5" max="2.0" step="0.1" value="1.0" class="speed-slider">
+              <small class="hint-text">تُرسل للنموذج مباشرة (أفضل من تغيير سرعة المشغّل)</small>
+            </div>
+            <div class="input-group">
+              <label for="steps-input"><svg class="ico ico-sm label-ico" aria-hidden="true"><use href="#i-sliders"/></svg> الجودة (Steps) <span id="steps-val" class="range-val">32</span></label>
+              <input type="range" id="steps-input" name="steps" min="8" max="64" step="4" value="32" class="speed-slider">
+              <small class="hint-text">قيم أعلى = جودة أفضل لكن أبطأ</small>
+            </div>
+            <div class="input-group">
+              <label for="guidance-input"><svg class="ico ico-sm label-ico" aria-hidden="true"><use href="#i-target"/></svg> الالتزام بالأسلوب <span id="guidance-val" class="range-val">2.0</span></label>
+              <input type="range" id="guidance-input" name="guidance" min="0.5" max="5.0" step="0.5" value="2.0" class="speed-slider">
             </div>
           </div>
         </div>
       </div>
 
       <!-- Generate Button -->
+      <div class="generate-row">
       <button type="submit" class="generate-btn" id="submit-btn" aria-live="polite">
-        <span class="btn-text">توليد الصوت 🚀</span>
+        <span class="btn-text"><svg class="ico ico-sm btn-ico" aria-hidden="true"><use href="#i-sparkles"/></svg> توليد الصوت</span>
         <span class="btn-loading" aria-hidden="true" style="display:none;">
           <span class="btn-spinner"></span>
-          جارٍ التوليد...
+          جارٍ التوليد... <span id="gen-elapsed">توليد...</span>
         </span>
       </button>
+      <div id="backend-badge" class="hint-text" style="display:none;margin-top:8px;text-align:center;"></div>
+      <button type="button" class="generate-btn cancel-btn" id="cancel-btn" style="display:none;">
+        <svg class="ico ico-sm btn-ico" aria-hidden="true"><use href="#i-stop"/></svg> إلغاء
+      </button>
+      </div>
+      <div class="progress-track" id="gen-progress-track" style="display:none;" aria-hidden="true"><div class="progress-fill" id="gen-progress-fill"></div></div>
 
     </form>
 
     <!-- Result Card -->
     <div class="card result-card" id="result-card" style="display:none;" aria-live="polite">
       <div class="card-header">
-        <span>🎧</span>
+        <span class="card-header-icon" aria-hidden="true"><svg class="ico"><use href="#i-headphones"/></svg></span>
         <h2>النتيجة</h2>
-        <button id="download-btn" class="action-icon-btn" title="تحميل الملف الصوتي" aria-label="تحميل الملف الصوتي"><span aria-hidden="true">⬇️</span> تحميل</button>
+        <div class="result-actions">
+        <button id="download-btn" class="action-icon-btn" title="تحميل الملف الصوتي" aria-label="تحميل الملف الصوتي"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-download"/></svg> تحميل</button>
+        <button id="share-btn" class="action-icon-btn" title="مشاركة الملف الصوتي" aria-label="مشاركة الملف الصوتي" style="display:none;"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-share"/></svg> مشاركة</button>
+        </div>
       </div>
 
       <!-- Waveform Visualizer -->
@@ -223,7 +303,7 @@
 
       <!-- Speed Control -->
       <div class="speed-control">
-        <label for="speed-slider">⚡ السرعة</label>
+        <label for="speed-slider"><svg class="ico ico-sm label-ico" aria-hidden="true"><use href="#i-zap"/></svg> السرعة</label>
         <input type="range" id="speed-slider" min="0.5" max="2.0" step="0.1" value="1.0"
           class="speed-slider" aria-label="سرعة التشغيل">
         <span id="speed-display" class="speed-badge">1.0x</span>
@@ -231,13 +311,13 @@
 
       <!-- Ambience -->
       <div class="ambience-section">
-        <div class="ambience-label">🌈 مؤثر بيئي (يعزف مع الصوت)</div>
+        <div class="ambience-label"><svg class="ico ico-sm label-ico" aria-hidden="true"><use href="#i-wave"/></svg> مؤثر بيئي (يعزف مع الصوت)</div>
         <div class="ambience-row">
-          <button class="ambience-btn active-ambience" data-ambience="none" aria-label="بلا مؤثر">🔇 بلا</button>
-          <button class="ambience-btn" data-ambience="rain" aria-label="صوت المطر">🌧️ مطر</button>
-          <button class="ambience-btn" data-ambience="cafe" aria-label="ضجيج مقهى">☕ مقهى</button>
-          <button class="ambience-btn" data-ambience="forest" aria-label="أصوات الطبيعة">🌿 طبيعة</button>
-          <button class="ambience-btn" data-ambience="white" aria-label="ضوضاء بيضاء هادئة">☁️ هدوء</button>
+          <button class="ambience-btn active-ambience" data-ambience="none" aria-label="بلا مؤثر"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-volume-x"/></svg> بلا</button>
+          <button class="ambience-btn" data-ambience="rain" aria-label="صوت المطر"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-rain"/></svg> مطر</button>
+          <button class="ambience-btn" data-ambience="cafe" aria-label="ضجيج مقهى"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-coffee"/></svg> مقهى</button>
+          <button class="ambience-btn" data-ambience="forest" aria-label="أصوات الطبيعة"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-leaf"/></svg> طبيعة</button>
+          <button class="ambience-btn" data-ambience="white" aria-label="ضوضاء بيضاء هادئة"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-cloud"/></svg> هدوء</button>
         </div>
       </div>
     </div>
@@ -249,7 +329,7 @@
 
     <div class="card">
       <div class="card-header">
-        <span>🎭</span><h2>استوديو البودكاست</h2>
+        <span class="card-header-icon" aria-hidden="true"><svg class="ico"><use href="#i-wave"/></svg></span><h2>استوديو البودكاست</h2>
       </div>
       <p class="hint-text">
         اكتب الحوار بصيغة <code>اسم الشخصية: النص</code> وسيتم توليد صوت مخصص لكل شخصية تلقائياً.
@@ -268,7 +348,7 @@
       <div id="character-assignments" aria-live="polite"></div>
 
       <button type="button" class="generate-btn" id="podcast-generate-btn" style="margin-top:16px;">
-        <span class="podcast-btn-text">🎭 توليد البودكاست</span>
+        <span class="podcast-btn-text"><svg class="ico ico-sm btn-ico" aria-hidden="true"><use href="#i-wave"/></svg> توليد البودكاست</span>
         <span class="podcast-loading" style="display:none;">
           <span class="btn-spinner"></span>
           جارٍ التوليد... <span id="podcast-progress"></span>
@@ -279,12 +359,17 @@
     <!-- Podcast Results -->
     <div class="card" id="podcast-results" style="display:none;">
       <div class="card-header">
-        <span>🎧</span><h2>مقاطع البودكاست</h2>
+        <span class="card-header-icon" aria-hidden="true"><svg class="ico"><use href="#i-headphones"/></svg></span><h2>مقاطع البودكاست</h2>
       </div>
       <div id="podcast-tracks" class="podcast-tracks"></div>
-      <button type="button" class="generate-btn" id="play-all-btn" style="margin-top:16px;background:linear-gradient(135deg,#1A5C52,#0A8C7A);">
-        ▶️ تشغيل الكل بالترتيب
+      <div class="generate-row">
+      <button type="button" class="generate-btn" id="play-all-btn">
+        <svg class="ico ico-sm btn-ico" aria-hidden="true"><use href="#i-play"/></svg> تشغيل الكل بالترتيب
       </button>
+      <button type="button" class="generate-btn" id="merge-podcast-btn">
+        <svg class="ico ico-sm btn-ico" aria-hidden="true"><use href="#i-download"/></svg> دمج وتحميل الكل (WAV)
+      </button>
+      </div>
     </div>
 
   </main>
@@ -294,13 +379,16 @@
 
     <div class="card">
       <div class="card-header">
-        <span>📚</span><h2>سجل الإنشاءات</h2>
-        <button id="clear-history-btn" class="danger-icon-btn" title="مسح السجل كاملاً" aria-label="مسح السجل كاملاً"><span aria-hidden="true">🗑️</span> مسح</button>
+        <span class="card-header-icon" aria-hidden="true"><svg class="ico"><use href="#i-book"/></svg></span><h2>سجل الإنشاءات</h2>
+        <button id="clear-history-btn" class="danger-icon-btn" title="مسح السجل كاملاً" aria-label="مسح السجل كاملاً"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-trash"/></svg> مسح</button>
       </div>
       <p class="hint-text">يُحفظ السجل محلياً على جهازك ويصل إليه حتى بدون إنترنت.</p>
+      <div class="input-group">
+        <input type="search" id="history-search" placeholder="ابحث في السجل..." aria-label="البحث في السجل" class="seed-input" style="width:100%;">
+      </div>
       <div id="history-list" aria-live="polite">
         <div class="empty-state">
-          <div class="empty-icon">🎵</div>
+          <div class="empty-icon"><svg class="ico"><use href="#i-music"/></svg></div>
           <p>لا توجد إنشاءات بعد.</p>
           <p class="empty-sub">ابدأ بتوليد أول مقطع صوتي!</p>
         </div>
@@ -312,12 +400,30 @@
   <!-- Toast Container -->
   <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
-  <script src="js/gradio_api.js"></script>
-  <script src="js/app.js"></script>
+  <!-- Custom confirm modal (replaces blocking confirm()/prompt()) -->
+  <div id="modal-overlay" class="modal-overlay" style="display:none;" role="presentation">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <h3 id="modal-title">تأكيد</h3>
+      <p id="modal-msg" class="hint-text"></p>
+      <div id="modal-input-wrap" class="input-group" style="display:none;">
+        <input type="text" id="modal-input" class="seed-input" maxlength="30" style="width:100%;">
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="modal-cancel" class="ref-action-btn">تراجع</button>
+        <button type="button" id="modal-ok" class="generate-btn" style="flex:1;">تأكيد</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js" defer></script>
+  <script src="js/vendor.js" defer></script>
+  <script src="js/gradio_api.js" defer></script>
+  <script src="js/app.js" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        const swUrl = new URL('sw.js', document.baseURI);
+        navigator.serviceWorker.register(swUrl).catch(() => {});
       });
     }
   </script>

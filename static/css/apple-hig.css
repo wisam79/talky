@@ -1,0 +1,205 @@
+/* ============================================================
+   TALKY — Apple Human Interface Guidelines theme (part 1/2)
+   Overrides style.css: iOS grouped lists, SF type scale,
+   segmented control, 44pt targets, 10px continuous corners.
+   Keeps every JS hook (IDs/classes) untouched.
+   ============================================================ */
+:root {
+  color-scheme: light dark;
+  --ios-blue: #007AFF;
+  --ios-blue-pressed: #0063CE;
+  --ios-red: #FF3B30;
+  --ios-green: #34C759;
+  --ios-orange: #FF9500;
+  --ios-yellow: #FFCC00;
+  --bg: #F2F2F7;
+  --bg-surface: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-2: #FFFFFF;
+  --surface-hover: #F2F2F7;
+  --border: rgba(60, 60, 67, 0.12);
+  --border-focus: rgba(0, 122, 255, 0.6);
+  --primary: #007AFF;
+  --primary-dim: #007AFF;
+  --on-primary: #FFFFFF;
+  --text: #000000;
+  --text-secondary: rgba(60, 60, 67, 0.6);
+  --text-hint: rgba(60, 60, 67, 0.4);
+  --error: #FF3B30;
+  --success: #248A3D;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-pill: 100px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+  --shadow-glow: none;
+}
+/* Dark (default, matches JS data-theme=dark init) */
+:root, [data-theme="dark"] {
+  --bg: #000000;
+  --bg-surface: #1C1C1E;
+  --surface: #1C1C1E;
+  --surface-2: #2C2C2E;
+  --surface-hover: #2C2C2E;
+  --border: rgba(84, 84, 88, 0.36);
+  --text: #FFFFFF;
+  --text-secondary: rgba(235, 235, 245, 0.6);
+  --text-hint: rgba(235, 235, 245, 0.4);
+  --success: #30D158;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+}
+[data-theme="light"] {
+  --bg: #F2F2F7;
+  --bg-surface: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-2: #FFFFFF;
+  --surface-hover: #F2F2F7;
+  --border: rgba(60, 60, 67, 0.12);
+  --text: #000000;
+  --text-secondary: rgba(60, 60, 67, 0.6);
+  --text-hint: rgba(60, 60, 67, 0.4);
+  --success: #248A3D;
+}
+
+/* ——— Base: SF stack, iOS grouped bg, 17pt body ——— */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "IBM Plex Sans Arabic", "Segoe UI", sans-serif;
+  background: var(--bg) !important;
+  background-image: none !important;
+  font-size: 17px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ——— Nav bar: iOS large-title ——— */
+.app-bar {
+  position: sticky; top: 0; z-index: 200;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent) !important;
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 0.5px solid var(--border) !important;
+  box-shadow: none !important;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.app-bar-logo { gap: 10px; }
+.logo-glow { font-size: 22px !important; filter: none !important; animation: none !important; }
+.logo-text h1 {
+  font-size: 28px !important; font-weight: 700 !important; letter-spacing: -0.4px;
+  background: none !important; -webkit-text-fill-color: currentColor !important; color: var(--text) !important;
+  line-height: 1.15;
+}
+.logo-sub { font-size: 11px !important; color: var(--text-secondary) !important; font-weight: 400 !important; }
+.theme-toggle { font-size: 17px !important; }
+
+/* ——— Segmented control (was tab-nav) ——— */
+.tab-nav {
+  position: sticky; top: 0; z-index: 190;
+  display: flex; gap: 0; margin: 12px 16px 4px; padding: 2px;
+  background: rgba(118, 118, 128, 0.16);
+  border-radius: 9px;
+  border: none !important; box-shadow: none !important;
+}
+.tab-btn {
+  flex: 1; min-height: 32px; border: none !important; border-radius: 7px !important;
+  background: transparent !important; color: var(--text) !important;
+  font-size: 13px !important; font-weight: 500 !important;
+  box-shadow: none !important; padding: 6px 4px !important;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+.tab-btn .tab-icon { font-size: 13px !important; }
+.tab-btn .tab-label { font-size: 13px !important; }
+.tab-btn.active {
+  background: var(--bg-surface) !important; color: var(--text) !important; font-weight: 600 !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18) !important;
+}
+
+/* ——— Content: 16px margins, grouped sections ——— */
+.tab-content { padding: 12px 16px calc(32px + env(safe-area-inset-bottom)) !important; gap: 20px !important; max-width: 700px; margin: 0 auto; }
+.card {
+  background: var(--bg-surface) !important;
+  border: none !important; border-radius: var(--radius-lg) !important;
+  box-shadow: none !important; padding: 0 !important; overflow: hidden;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+.card + .card { margin-top: 0; }
+.card-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 14px 16px 6px !important;
+  border: none !important;
+}
+.card-header > span:first-child { font-size: 15px !important; }
+.card-header h2 { font-size: 13px !important; font-weight: 400 !important; text-transform: uppercase; letter-spacing: 0.2px; color: var(--text-secondary) !important; }
+.card-header .action-icon-btn, .card-header .danger-icon-btn { margin-inline-start: auto; }
+
+/* ============================================================
+   PART 2a (merged from apple-hig-2.css): controls — 44pt targets
+   ============================================================ */
+.input-group { padding: 6px 16px 14px !important; }
+.input-group label { font-size: 15px; font-weight: 400; color: var(--text); display: block; margin-bottom: 6px; }
+textarea, select, input[type="text"], input[type="search"], input[type="number"], .seed-input {
+  width: 100%; min-height: 44px;
+  background: rgba(118, 118, 128, 0.12) !important;
+  border: none !important; border-radius: var(--radius-md) !important;
+  color: var(--text) !important; font-size: 17px !important; font-family: inherit;
+  padding: 10px 12px !important;
+}
+textarea { min-height: 120px; resize: vertical; line-height: 1.6; }
+textarea:focus, select:focus, input:focus { outline: 2px solid var(--border-focus); outline-offset: -2px; background: rgba(118,118,128,0.18) !important; }
+.hint-text, .tip { font-size: 13px !important; color: var(--text-secondary) !important; line-height: 1.5; }
+.text-meta { font-size: 13px !important; color: var(--text-secondary) !important; padding: 8px 2px 0; display: flex; gap: 6px; }
+.generate-btn, #play-all-btn, #merge-podcast-btn, #podcast-generate-btn, #modal-ok {
+  min-height: 50px !important; border: none !important; border-radius: var(--radius-md) !important;
+  background: var(--ios-blue) !important; color: #fff !important;
+  font-size: 17px !important; font-weight: 600 !important;
+  box-shadow: none !important; width: 100%;
+}
+.generate-btn.cancel-btn, #cancel-btn { background: var(--ios-red) !important; }
+#play-all-btn { background: var(--ios-green) !important; }
+#merge-podcast-btn { background: rgba(118,118,128,0.2) !important; color: var(--ios-blue) !important; }
+.icon-btn, .ref-action-btn, .action-icon-btn, .danger-icon-btn,
+.ambience-btn, .preset-btn, .fav-btn {
+  min-height: 44px !important; border-radius: var(--radius-md) !important;
+  font-size: 15px !important; font-weight: 400 !important;
+  background: rgba(118, 118, 128, 0.12) !important;
+  border: none !important; color: var(--text) !important; box-shadow: none !important;
+  padding: 10px 14px !important;
+}
+.preset-btn.active, .ambience-btn.active-ambience { background: var(--ios-blue) !important; color: #fff !important; }
+.fav-btn.active-fav { background: rgba(255, 149, 0, 0.16) !important; color: var(--ios-orange) !important; }
+.danger-icon-btn { color: var(--ios-red) !important; }
+.action-icon-btn { color: var(--ios-blue) !important; }
+.presets-grid { display: flex !important; flex-wrap: wrap; gap: 8px; padding: 4px 16px 14px; }
+.upload-doc-row, .ref-audio-row, .generate-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 16px 14px; }
+.generate-row .generate-btn { flex: 1; }
+input[type="range"], .speed-slider { accent-color: var(--ios-blue); width: 100%; height: 44px; }
+.progress-track { height: 4px !important; border-radius: 2px !important; background: rgba(118,118,128,0.25) !important; margin: 12px 16px 0 !important; }
+.progress-fill { background: var(--ios-blue) !important; }
+
+/* ============================================================
+   PART 2b (merged from apple-hig-3.css): rows, banners, sheets
+   ============================================================ */
+.waveform-canvas { border-radius: var(--radius-md) !important; background: rgba(118,118,128,0.12) !important; border: none !important; }
+.podcast-track, .history-item, .character-assignment {
+  background: rgba(118, 118, 128, 0.1) !important;
+  border: none !important; border-radius: var(--radius-md) !important;
+  padding: 12px !important; box-shadow: none !important;
+}
+#toast-container { top: calc(10px + env(safe-area-inset-top)) !important; bottom: auto !important; }
+.toast { border-radius: 12px !important; font-size: 15px !important; }
+.modal-overlay { align-items: flex-end !important; }
+.modal-card { max-width: 480px !important; border-radius: 14px !important; text-align: center; }
+.modal-actions { flex-direction: column; gap: 8px; }
+#record-btn.recording { background: var(--ios-red) !important; color: #fff !important; }
+@media (min-width: 700px) {
+  .tab-nav { max-width: 668px; margin-inline: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
