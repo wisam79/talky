@@ -102,7 +102,7 @@ def main():
             print("\n[!] node غير مثبّت — تم تخطي اختبارات الفرونتند")
             results["node"] = 0
         else:
-            cmd = ["node", "--test", "tests_js/"]
+            cmd = ["node", "--test", "tests_js/*.test.js"]
             if args.verbose or want_all:
                 cmd.append("--test-reporter=spec")
             results["node"] = run(cmd)

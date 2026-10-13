@@ -31,4 +31,4 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run test suite (unit: static + backend + frontend JS)
-        run: python scripts/run_tests.py --quick
+        run: python scripts/run_tests.py --quick --verbose
