@@ -1,7 +1,6 @@
 ---
-description: معايير وقواعد تطوير ونشر تطبيقات Modal السحابية ونماذج الذكاء الاصطناعي
-globs: ["backend/modal/**/*.py", "frontend/src/services/api/**/*.ts"]
-alwaysApply: true
+trigger: always_on
+description: "معايير وقواعد تطوير ونشر تطبيقات Modal السحابية ونماذج الذكاء الاصطناعي"
 ---
 
 # قواعد تطوير ونشر تطبيقات Modal السحابية (Modal Deployment Guardrails)
