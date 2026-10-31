@@ -19,19 +19,29 @@ export class VoiceManager {
       }));
       return this.builtinVoices;
     } catch (e) {
-      console.warn('تعذر تحميل voices.json، استخدام الشخصية الاحتياطية:', e);
+      console.warn('تعذر تحميل voices.json، استخدام الشخصيات الاحتياطية:', e);
       this.builtinVoices = [
         {
           id: 'builtin:faseeh',
           source: 'builtin',
-          name: 'فصيح - وثائقي وإخباري',
+          name: 'فصيح',
           description: 'صوت جهوري وقور وفصيح، مناسب للتقارير والوثائقيات والكتب',
           language: 'ar',
           gender: 'male',
           tags: ['فصيح', 'وثائقي', 'رسمي'],
-          sampleUrl: 'samples/ar.ref.24k.wav',
-          refText:
-            'ويدقق النظر في القرآن الكريم وسائر الكتب السماوية ويتبع مسالك الرسل العظام عليهم الصلاة والسلام.',
+          sampleUrl: 'samples/faseeh.wav',
+          refText: 'مرحباً، أنا فصيح؛ أقدّم لكم صوتاً جهورياً وقوراً وفصيحاً.',
+        },
+        {
+          id: 'builtin:nour',
+          source: 'builtin',
+          name: 'نور',
+          description: 'صوت نسائي هادئ ومتزن، مناسب للروايات والسرد والتأمل',
+          language: 'ar',
+          gender: 'female',
+          tags: ['روائي', 'سرد', 'تأمل'],
+          sampleUrl: 'samples/nour.wav',
+          refText: 'أهلاً بكم، أنا نور؛ نبرتي هادئة ومتزنة، ترافقكم في الروايات والسرد والتأمل.',
         },
       ];
       return this.builtinVoices;
@@ -60,19 +70,20 @@ export class VoiceManager {
       if (this.base64Cache.has(voice.id)) {
         audioBase64 = this.base64Cache.get(voice.id)!;
       } else {
-        audioBase64 = await audioService.urlToBase64(voice.sampleUrl);
-        this.base64Cache.set(voice.id, audioBase64);
+        try {
+          audioBase64 = await audioService.urlToBase64(voice.sampleUrl);
+          this.base64Cache.set(voice.id, audioBase64);
+        } catch (err) {
+          console.warn('تعذر تحميل العينة الصوتية:', err);
+          audioBase64 = '';
+        }
       }
     }
 
-    if (!audioBase64) {
-      throw new Error(`تعذر العثور على العينة الصوتية للشخصية: ${voice.name}`);
-    }
-
     return {
-      audioBase64,
+      audioBase64: audioBase64 || '',
       mimeType: 'audio/wav',
-      refText: voice.refText,
+      refText: voice.refText || '',
     };
   }
 }

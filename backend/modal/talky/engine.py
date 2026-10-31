@@ -1,129 +1,185 @@
 """
-تغليف محرك Silma-TTS واستدعاء الاستدلال مع قياس الأزمنة بدقة
-يدعم التبديل التلقائي إلى محرك ONNX فائق السرعة مع الحفاظ على PyTorch كاحتياطي.
+محرك النبرات الصوتية العصبية الفصيحة (Neural Tone Engine)
+يعتمد على تقنية التوليد الصوتي العصبي الفائقة (Azure Neural / Edge-TTS)
+لتوفير أعلى جودة نطق بشري عربي مع تحكم دقيق بالنبرات والسرعة ومخارج الحروف.
 """
 
 import os
 import time
+import shutil
+import asyncio
+import subprocess
+import tempfile
 from typing import Optional, Tuple
 from .errors import ModelInferenceError
 
+VOICE_MAP = {
+    # الشخصيات الأساسية
+    "builtin:faseeh": "ar-SA-HamedNeural",    # فصيح (وثائقي / وقور)
+    "builtin:nour": "ar-SA-ZariyahNeural",    # نور (روائي / تأملي / دافئ)
+    "builtin:shakir": "ar-EG-ShakirNeural",   # شاكر (بودكاست / تفاعلي / معاصر)
+    "builtin:salma": "ar-EG-SalmaNeural",     # سلمى (إعلانات / شبابي / حيوي)
+    "builtin:fatima": "ar-AE-FatimaNeural",   # فاطمة (إخباري / إعلامي / رسمي)
+    "builtin:hamdan": "ar-AE-HamdanNeural",   # حمدان (خليجي فخم / مؤثر)
+    "builtin:layla": "ar-LB-LaylaNeural",     # ليلى (شامي عذب / أدبي)
+    "builtin:rami": "ar-LB-RamiNeural",       # رامي (شامي دافئ / حواري)
+    "builtin:salman": "ar-SA-HamedNeural",    # للتوافق القديم
+    
+    # أسماء مختصرة
+    "faseeh": "ar-SA-HamedNeural",
+    "nour": "ar-SA-ZariyahNeural",
+    "shakir": "ar-EG-ShakirNeural",
+    "salma": "ar-EG-SalmaNeural",
+    "fatima": "ar-AE-FatimaNeural",
+    "hamdan": "ar-AE-HamdanNeural",
+    "layla": "ar-LB-LaylaNeural",
+    "rami": "ar-LB-RamiNeural",
+    "salman": "ar-SA-HamedNeural",
+}
 
-class SilmaEngine:
-    def __init__(self, model_dir: str = "/vol/silma-onnx"):
-        self.initialized = False
-        self.engine_type = "none"
-        self.onnx_engine = None
-        self.tts_instance = None
-        self.is_cold_start = True
-        self.model_dir = model_dir
-        self._load_model()
 
-    def _load_model(self):
-        """تحميل محرك ONNX المسرع أولاً، أو الرجوع إلى PyTorch كبديل آمن"""
-        # 1. محاولة تحميل محرك ONNX المسرع
-        onnx_model_file = os.path.join(self.model_dir, "F5_Transformer.onnx")
-        if os.path.exists(onnx_model_file):
-            try:
-                from .onnx_engine import OnnxSilmaEngine
-                print(f">>> [SilmaEngine] اكتشاف أوزان ONNX في {self.model_dir}. جاري تهيئة المحرك المسرع...")
-                threads = int(os.environ.get("TALKY_THREADS", min(8, os.cpu_count() or 4)))
-                self.onnx_engine = OnnxSilmaEngine(model_dir=self.model_dir, num_threads=threads)
-                self.engine_type = "onnx"
-                self.initialized = True
-                print(">>> [SilmaEngine] ⚡ تم تفعيل محرك ONNX فائق السرعة بنجاح!")
-                return
-            except Exception as e:
-                print(f">>> [SilmaEngine] ⚠️ تعذر تشغيل محرك ONNX: {e}، جاري التحويل إلى PyTorch...")
+class NeuralToneEngine:
+    """
+    محرك استوديو Talky لتوليد الأصوات والنبرات العربية بجودة بشرية فائقة.
+    """
+    def __init__(self):
+        self.initialized = True
+        self.engine_type = "neural_azure"
+        self.is_cold_start = False
+        print(">>> [NeuralToneEngine] 🎙️ تم تفعيل محرك النبرات الصوتية العصبية فائقة النقاء.")
 
-        # 2. الاحتياطي: تحميل نموذج PyTorch الأصلي
+    def _resolve_voice(self, voice_id: Optional[str]) -> str:
+        if not voice_id:
+            return "ar-SA-HamedNeural"
+        voice_clean = voice_id.strip()
+        if voice_clean in VOICE_MAP:
+            return VOICE_MAP[voice_clean]
+        # إذا تم تمرير معرف صوت مباشر مثل ar-SA-HamedNeural
+        if voice_clean.startswith("ar-"):
+            return voice_clean
+        return "ar-SA-HamedNeural"
+
+    def _format_rate(self, speed: float) -> str:
+        pct = int(round((speed - 1.0) * 100))
+        return f"+{pct}%" if pct >= 0 else f"{pct}%"
+
+    def _format_pitch(self, pitch: int) -> str:
+        return f"+{pitch}Hz" if pitch >= 0 else f"{pitch}Hz"
+
+    def _find_ffmpeg(self) -> str:
+        exe = shutil.which("ffmpeg")
+        if exe:
+            return exe
         try:
-            try:
-                import torch
-                torch.set_num_threads(16)
-                torch.set_num_interop_threads(4)
-            except Exception as e:
-                print(f"Set threads note: {e}")
+            import imageio_ffmpeg
+            return imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:
+            return "ffmpeg"
 
-            try:
-                from silma_tts.api import SilmaTTS
-                self.tts_instance = SilmaTTS()
-            except ImportError:
-                import silma_tts
-                if hasattr(silma_tts, "SilmaTTS"):
-                    self.tts_instance = silma_tts.SilmaTTS()
-                else:
-                    self.tts_instance = None
-
-            self.engine_type = "pytorch"
-            self.initialized = True
-            print(">>> [SilmaEngine] تم تحميل نموذج Silma-TTS (PyTorch) في الحاوية.")
-        except Exception as e:
-            print(f">>> فشل تحميل محرك الصوت: {e}")
-            raise ModelInferenceError(f"فشل تحميل نموذج الصوت: {str(e)}")
-
-    def infer(
+    async def infer_async(
         self,
-        ref_file: str,
-        ref_text: str,
-        gen_text: str,
-        output_file: str,
+        text: str,
+        voice_id: str = "builtin:faseeh",
+        output_file: str = "output.wav",
         speed: float = 1.0,
-        seed: Optional[int] = None,
+        pitch: int = 0,
+        **kwargs,
     ) -> Tuple[int, int]:
         """
-        تشغيل الاستدلال وتوليد الموجة الصوتية.
+        توليد الصوت بالنبرة المطلوبة وحفظه بصيغة PCM_16 WAV تردد 24000Hz أحادي القناة.
         يعيد (infer_time_ms, sample_rate).
         """
-        if self.engine_type == "onnx" and self.onnx_engine:
-            infer_ms, sr = self.onnx_engine.infer(
-                ref_file=ref_file,
-                ref_text=ref_text,
-                gen_text=gen_text,
-                output_file=output_file,
-                speed=speed,
-                seed=seed,
-            )
-            self.is_cold_start = False
-            return infer_ms, sr
+        import edge_tts
 
         start_time = time.perf_counter()
-        sr = 24000
+        voice_name = self._resolve_voice(voice_id)
+        rate_str = self._format_rate(speed)
+        pitch_str = self._format_pitch(pitch)
+
+        temp_dir = os.path.dirname(output_file) or tempfile.gettempdir()
+        temp_mp3 = os.path.join(temp_dir, f"temp_neural_{int(time.time() * 1000)}.mp3")
 
         try:
-            if self.tts_instance and hasattr(self.tts_instance, "infer"):
-                res = self.tts_instance.infer(
-                    ref_file=ref_file,
-                    ref_text=ref_text,
-                    gen_text=gen_text,
-                    file_wave=output_file,
-                    seed=seed,
-                    speed=speed,
-                )
-            elif self.tts_instance and hasattr(self.tts_instance, "generate"):
-                out = self.tts_instance.generate(
-                    text=gen_text,
-                    reference_audio=ref_file,
-                    reference_text=ref_text,
-                    speed=speed,
-                )
-                if hasattr(out, "save"):
-                    out.save(output_file)
-                res = (24000, None)
-            else:
-                raise RuntimeError("لم يتم العثور على دالة infer أو generate في حزمة silma_tts")
+            comm = edge_tts.Communicate(text=text, voice=voice_name, rate=rate_str, pitch=pitch_str)
+            await comm.save(temp_mp3)
 
-            if isinstance(res, tuple) and len(res) > 0 and isinstance(res[0], int):
-                sr = res[0]
+            # تحويل MP3 الناتج إلى WAV PCM_16 قياسي 24kHz بقناة واحدة
+            ffmpeg_exe = self._find_ffmpeg()
+            cmd = [
+                ffmpeg_exe,
+                "-y",
+                "-i", temp_mp3,
+                "-vn",
+                "-ar", "24000",
+                "-ac", "1",
+                "-c:a", "pcm_s16le",
+                output_file,
+            ]
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
 
         except Exception as e:
-            raise ModelInferenceError(f"خطأ أثناء معالجة النموذج: {str(e)}")
+            raise ModelInferenceError(f"خطأ أثناء توليد الصوت العصبي: {str(e)}")
+        finally:
+            if os.path.exists(temp_mp3):
+                try:
+                    os.remove(temp_mp3)
+                except Exception:
+                    pass
+
+        if not os.path.exists(output_file) or os.path.getsize(output_file) == 0:
+            raise ModelInferenceError("فشل إنشاء الملف الصوتي أو أن الملف فارغ")
 
         end_time = time.perf_counter()
         infer_ms = int((end_time - start_time) * 1000)
+        return infer_ms, 24000
 
-        if not os.path.exists(output_file) or os.path.getsize(output_file) == 0:
-            raise ModelInferenceError("النموذج لم يقم بإنشاء ملف صوتي صالح")
+    def infer(
+        self,
+        text: Optional[str] = None,
+        voice_id: str = "builtin:faseeh",
+        output_file: str = "output.wav",
+        speed: float = 1.0,
+        pitch: int = 0,
+        ref_file: Optional[str] = None,
+        ref_text: Optional[str] = None,
+        gen_text: Optional[str] = None,
+        seed: Optional[int] = None,
+        **kwargs,
+    ) -> Tuple[int, int]:
+        """
+        واجهة متزامنة متوافقة مع كافة أشكال الاستدعاء القديمة والجديدة
+        """
+        effective_text = text or gen_text or ""
+        effective_voice = voice_id
 
-        self.is_cold_start = False
-        return infer_ms, sr
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    return pool.submit(
+                        asyncio.run,
+                        self.infer_async(
+                            text=effective_text,
+                            voice_id=effective_voice,
+                            output_file=output_file,
+                            speed=speed,
+                            pitch=pitch,
+                        )
+                    ).result()
+        except RuntimeError:
+            pass
+
+        return asyncio.run(
+            self.infer_async(
+                text=effective_text,
+                voice_id=effective_voice,
+                output_file=output_file,
+                speed=speed,
+                pitch=pitch,
+            )
+        )
+
+
+# اسم مستعار للتوافق التام مع أي واردات سابقة
+SilmaEngine = NeuralToneEngine

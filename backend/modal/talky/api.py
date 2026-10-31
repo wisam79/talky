@@ -20,11 +20,11 @@ from .schemas import (
 )
 from .errors import TalkyError, TextEmptyError, TextTooLongError
 from .limits import MAX_TEXT_LENGTH
-from .audio import decode_base64_audio, normalize_reference_audio, encode_audio_file
+from .audio import encode_audio_file
 
 
 def create_app(engine_instance=None):
-    app = FastAPI(title="Talky Arabic TTS API", version="1.0.0")
+    app = FastAPI(title="Talky Arabic Neural Studio API", version="1.0.0")
 
     # تفعيل CORS بالكامل لصفحات GitHub Pages والمتصفحات
     app.add_middleware(
@@ -58,7 +58,7 @@ def create_app(engine_instance=None):
             error=ApiErrorSchema(
                 code="SERVICE_UNAVAILABLE",
                 message=str(exc),
-                messageAr="حدث خطأ غير متوقع في السيرفر السحابي",
+                messageAr="حدث خطأ أثناء معالجة الصوت",
                 retryable=True,
             ),
         )
@@ -71,9 +71,9 @@ def create_app(engine_instance=None):
     async def health():
         return {
             "ok": True,
-            "model": "silma-tts-v1",
-            "engine": getattr(engine_instance, "engine_type", "unknown") if engine_instance else "unknown",
-            "version": "1.0.0",
+            "model": "neural-azure-ar",
+            "engine": getattr(engine_instance, "engine_type", "neural_azure") if engine_instance else "neural_azure",
+            "version": "2.0.0",
             "warm": engine_instance is not None and getattr(engine_instance, "initialized", False),
         }
 
@@ -90,53 +90,66 @@ def create_app(engine_instance=None):
         if len(clean_text) > MAX_TEXT_LENGTH:
             raise TextTooLongError(len(clean_text), MAX_TEXT_LENGTH)
 
-        # تجهيز المجلد المؤقت للطلب
-        with tempfile.TemporaryDirectory() as work_dir:
-            # 1. فك وتطبيع العينة الصوتية المرجعية
-            raw_audio = decode_base64_audio(req.voice.reference.audioBase64)
-            norm_ref_path, _ = normalize_reference_audio(raw_audio, work_dir)
+        # تحديد نبرة الصوت والشخصية
+        voice_id = "builtin:faseeh"
+        if req.voice:
+            if req.voice.voiceId:
+                voice_id = req.voice.voiceId
+            elif getattr(req.voice, "type", "") == "preset":
+                voice_id = getattr(req.voice, "voiceId", "builtin:faseeh") or "builtin:faseeh"
 
+        speed = req.options.speed if req.options else 1.0
+        pitch = getattr(req.options, "pitch", 0) or 0
+        target_fmt = req.options.format if req.options else "wav"
+
+        # استخدام المحرك المتاح
+        engine = engine_instance
+        if engine is None:
+            from .engine import NeuralToneEngine
+            engine = NeuralToneEngine()
+
+        with tempfile.TemporaryDirectory() as work_dir:
             output_wav_path = os.path.join(work_dir, "output.wav")
 
-            # 2. الاستدلال عبر SilmaEngine
-            engine = engine_instance
-            if engine is None:
-                from .engine import SilmaEngine
-                engine = SilmaEngine()
+            # استدعاء محرك النبرات الصوتية العصبية
+            infer_start = time.perf_counter()
+            if hasattr(engine, "infer_async"):
+                infer_ms, sr = await engine.infer_async(
+                    text=clean_text,
+                    voice_id=voice_id,
+                    output_file=output_wav_path,
+                    speed=speed,
+                    pitch=pitch,
+                )
+            else:
+                infer_ms, sr = engine.infer(
+                    text=clean_text,
+                    voice_id=voice_id,
+                    output_file=output_wav_path,
+                    speed=speed,
+                    pitch=pitch,
+                )
 
-            infer_ms, sr = engine.infer(
-                ref_file=norm_ref_path,
-                ref_text=req.voice.reference.refText,
-                gen_text=clean_text,
-                output_file=output_wav_path,
-                speed=req.options.speed,
-                seed=req.options.seed,
-            )
-
-            # 3. ترميز الناتج إلى Base64
+            # ترميز الملف وحساب المدة بدقة
             encode_start = time.perf_counter()
-            audio_base64, duration_ms = encode_audio_file(output_wav_path, req.options.format)
+            b64_audio, duration_ms = encode_audio_file(output_wav_path, target_format=target_fmt)
             encode_ms = int((time.perf_counter() - encode_start) * 1000)
 
             total_ms = int((time.perf_counter() - total_start) * 1000)
 
-            cold_start = getattr(engine, "is_cold_start", False)
-            if hasattr(engine, "is_cold_start"):
-                engine.is_cold_start = False
-
-            return GenerateSuccess(
+            response = GenerateSuccess(
                 requestId=req.requestId,
                 audio=AudioResult(
-                    base64=audio_base64,
-                    format=req.options.format,
-                    mimeType="audio/wav" if req.options.format == "wav" else "audio/mpeg",
+                    base64=b64_audio,
+                    format=target_fmt,
+                    mimeType="audio/wav" if target_fmt == "wav" else "audio/mpeg",
                     sampleRate=sr,
                     durationMs=duration_ms,
                 ),
                 meta=MetaResult(
-                    model="silma-tts-v1",
-                    coldStart=cold_start,
-                    seed=req.options.seed,
+                    model="neural-azure-ar",
+                    coldStart=getattr(engine, "is_cold_start", False),
+                    seed=req.options.seed if req.options else None,
                     timings=Timings(
                         inferMs=infer_ms,
                         encodeMs=encode_ms,
@@ -144,5 +157,6 @@ def create_app(engine_instance=None):
                     ),
                 ),
             )
+            return JSONResponse(status_code=200, content=response.model_dump())
 
     return app

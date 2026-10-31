@@ -11,18 +11,25 @@ export interface VoicePersona {
   tags?: string[];
   sampleUrl?: string;
   audioBase64?: string;
-  refText: string;
+  refText?: string;
   createdAt?: string;
 }
 
 export interface ReferencePayload {
-  audioBase64: string;
-  mimeType: 'audio/wav';
-  refText: string;
+  audioBase64?: string;
+  mimeType?: 'audio/wav';
+  refText?: string;
+}
+
+export interface VoicePayload {
+  type: 'inline' | 'preset' | 'custom';
+  voiceId?: string;
+  reference?: ReferencePayload;
 }
 
 export interface GenerateOptions {
   speed?: number;
+  pitch?: number;
   seed?: number | null;
   format?: AudioFormat;
 }
@@ -31,7 +38,7 @@ export interface GenerateRequest {
   apiVersion: 1;
   requestId: string;
   text: string;
-  voice: { type: 'inline'; reference: ReferencePayload };
+  voice: VoicePayload;
   options?: GenerateOptions;
 }
 
@@ -66,7 +73,11 @@ export interface GenerateSuccess {
     model: string;
     coldStart: boolean;
     seed?: number | null;
-    timings: { inferMs: number; encodeMs: number; totalMs: number };
+    timings: {
+      inferMs: number;
+      encodeMs: number;
+      totalMs: number;
+    };
   };
 }
 
@@ -80,5 +91,11 @@ export interface GenerateFailure {
 export type GenerateResponse = GenerateSuccess | GenerateFailure;
 
 export type GenerationPhase =
-  | 'idle' | 'preparing' | 'connecting' | 'warming'
-  | 'generating' | 'decoding' | 'ready' | 'error';
+  | 'idle'
+  | 'preparing'
+  | 'connecting'
+  | 'warming'
+  | 'generating'
+  | 'decoding'
+  | 'ready'
+  | 'error';

@@ -1,11 +1,13 @@
 import React from 'react';
-import { AlignRight, CircleHelp, Clock3, SlidersHorizontal } from 'lucide-react';
+import { AlignRight, CircleHelp, Clock3, SlidersHorizontal, Sparkles } from 'lucide-react';
 
 interface ManuscriptEditorProps {
   text: string;
   onChange: (val: string) => void;
   speed: number;
   onSpeedChange: (speed: number) => void;
+  pitch?: number;
+  onPitchChange?: (pitch: number) => void;
   format: 'wav' | 'mp3';
   onFormatChange: (format: 'wav' | 'mp3') => void;
   disabled?: boolean;
@@ -27,11 +29,13 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
   onChange,
   speed,
   onSpeedChange,
+  pitch = 0,
+  onPitchChange,
   format,
   onFormatChange,
   disabled,
 }) => {
-  const maxLength = 600;
+  const maxLength = 1500;
   const currentLength = text.length;
   const isNearLimit = currentLength >= maxLength * 0.9;
   const isOverLimit = currentLength > maxLength;
@@ -50,16 +54,16 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
           <span className="section-step" aria-hidden="true">02</span>
           <div>
             <h2 id="editor-heading" className="text-base font-semibold text-paper-100">اكتب نصّك</h2>
-            <p id="manuscript-hint" className="mt-0.5 text-xs leading-relaxed text-mist-300">هنا تبدأ حكايتك الصوتية</p>
+            <p id="manuscript-hint" className="mt-0.5 text-xs leading-relaxed text-mist-300">نطق فصيح ونبرات واقعية دقيقة</p>
           </div>
         </div>
         <span className="flex items-center gap-1.5 text-xs text-mist-300">
           <AlignRight className="size-4" strokeWidth={1.75} aria-hidden="true" />
-          العربية
+          العربية الفصحى
         </span>
       </div>
 
-      {/* جسم المحرر بخط النسخ ومسطرة خافتة لا تزاحم النص. */}
+      {/* جسم المحرر بخط النسخ ومسطرة خافتة */}
       <div className="manuscript-body">
         <label htmlFor="manuscript-text" className="sr-only">النص المراد تحويله إلى صوت</label>
         <textarea
@@ -72,13 +76,13 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
           disabled={disabled}
           aria-describedby={`manuscript-hint manuscript-count${isOverLimit ? ' manuscript-limit' : ''}`}
           aria-invalid={isOverLimit}
-          placeholder="اكتب شيئًا يستحق أن يُسمع… قصة، فكرة، أو بداية جديدة."
+          placeholder="اكتب شيئًا يستحق أن يُسمع… قصة، فكرة، حوار، أو مقال."
           className="manuscript-ruler"
         />
 
         {isOverLimit && (
           <p id="manuscript-limit" role="alert" className="mt-3 rounded-control border border-unnab-400/30 bg-unnab-400/10 px-3 py-2 text-sm leading-relaxed text-unnab-400">
-            الحد الأقصى 600 حرف لكل مقطع. اختصر النص قبل توليد الصوت.
+            الحد الأقصى 1500 حرف لكل مقطع. اختصر النص قبل توليد الصوت.
           </p>
         )}
 
@@ -94,14 +98,14 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
             <span className="h-1 w-12 overflow-hidden rounded-full bg-ink-600" aria-hidden="true">
               <span
                 className={`block h-full rounded-full ${isOverLimit ? 'bg-unnab-400' : isNearLimit ? 'bg-brass-400' : 'bg-mist-500'}`}
-                style={{ width: `${Math.min(100, currentLength / maxLength * 100)}%` }}
+                style={{ width: `${Math.min(100, (currentLength / maxLength) * 100)}%` }}
               />
             </span>
           </div>
         </div>
       </div>
 
-      {/* التشكيل اختياري، والأسماء متاحة للوحة المفاتيح وقارئ الشاشة. */}
+      {/* شريط علامات التشكيل */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-ink-600 px-4 py-3 sm:px-6">
         <span className="text-xs text-mist-300">أضف تشكيلًا</span>
         <div className="flex flex-wrap gap-1" role="group" aria-label="علامات التشكيل">
@@ -122,7 +126,9 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
         <span className="ms-auto hidden text-xs text-mist-500 xl:inline">اختياري</span>
       </div>
 
-      <div className="editor-controls">
+      {/* خيارات التحكم بالسرعة والنبرة والصيغة */}
+      <div className="editor-controls grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {/* سرعة الإلقاء */}
         <div className="min-w-0">
           <div className="flex items-center justify-between gap-2">
             <label htmlFor="voice-speed" className="flex items-center gap-2 text-xs font-medium text-mist-300">
@@ -150,6 +156,37 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
           </div>
         </div>
 
+        {/* نبرة الصوت (Pitch) */}
+        <div className="min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor="voice-pitch" className="flex items-center gap-2 text-xs font-medium text-mist-300">
+              <Sparkles className="size-4" strokeWidth={1.75} aria-hidden="true" />
+              طبقة النبرة
+            </label>
+            <output htmlFor="voice-pitch" className="text-xs tabular-numbers text-paper-100" dir="ltr">
+              {pitch > 0 ? `+${pitch}Hz` : pitch < 0 ? `${pitch}Hz` : 'طبيعية'}
+            </output>
+          </div>
+          <input
+            id="voice-pitch"
+            type="range"
+            dir="ltr"
+            min="-15"
+            max="15"
+            step="1"
+            value={pitch}
+            disabled={disabled}
+            onChange={(e) => onPitchChange && onPitchChange(parseInt(e.target.value, 10))}
+            aria-valuetext={`نبرة الصوت ${pitch} هرتز`}
+            className="speed-slider"
+          />
+          <div className="flex justify-between text-xs text-mist-500" dir="ltr">
+            <span>أعمق</span>
+            <span>أعلى</span>
+          </div>
+        </div>
+
+        {/* صيغة الصوت */}
         <div>
           <p id="audio-format-label" className="mb-2 text-xs font-medium text-mist-300">صيغة الصوت</p>
           <div className="flex gap-1 rounded-control border border-ink-600 bg-ink-900 p-1" role="group" aria-labelledby="audio-format-label" dir="ltr">
@@ -160,7 +197,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
                 onClick={() => onFormatChange(audioFormat)}
                 disabled={disabled}
                 aria-pressed={format === audioFormat}
-                className={`min-h-11 rounded-[6px] px-3 text-xs font-semibold transition-colors ${format === audioFormat ? 'bg-ink-600 text-paper-100' : 'text-mist-300 hover:bg-ink-700'}`}
+                className={`min-h-11 flex-1 rounded-[6px] px-3 text-xs font-semibold transition-colors ${format === audioFormat ? 'bg-ink-600 text-paper-100' : 'text-mist-300 hover:bg-ink-700'}`}
               >
                 {audioFormat === 'wav' ? 'WAV' : 'MP3'}
               </button>
@@ -171,7 +208,7 @@ export const ManuscriptEditor: React.FC<ManuscriptEditorProps> = ({
 
       <div className="studio-note border-t border-ink-600 px-4 py-3 sm:px-6">
         <CircleHelp className="mt-1 size-3.5 shrink-0 text-mist-500" strokeWidth={1.75} aria-hidden="true" />
-        <p>نصيحة صغيرة: التشكيل وعلامات الترقيم يساعدان على وضوح النطق.</p>
+        <p>ملاحظة: يدعم المحرك علامات الترقيم (؟ ، .) لإعطاء تنغيم بشري طبيعي للسياق.</p>
       </div>
     </section>
   );

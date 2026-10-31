@@ -1,7 +1,7 @@
-silma-tts
-torch
-torchaudio
-soundfile
+edge-tts>=7.0.0
+fastapi>=0.110.0
+pydantic>=2.0.0
+soundfile>=0.12.1
 scipy
-fastapi
-pydantic
+pydub
+uvicorn

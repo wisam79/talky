@@ -27,6 +27,7 @@ export function App() {
     'لكلِّ كلمةٍ حكاية، ولكلِّ حكايةٍ صوت. أهلًا بك في تالكي، مساحتك لتحويل الأفكار إلى صوتٍ عربيٍّ ينبض بالحياة.'
   );
   const [speed, setSpeed] = useState<number>(1.0);
+  const [pitch, setPitch] = useState<number>(0);
   const [format, setFormat] = useState<'wav' | 'mp3'>('wav');
   const [voices, setVoices] = useState<VoicePersona[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<VoicePersona | null>(null);
@@ -60,8 +61,8 @@ export function App() {
       setError('يرجى كتابة نص لتوليد الصوت');
       return;
     }
-    if (text.length > 600) {
-      setError('الحد الأقصى 600 حرف لكل مقطع. اختصر النص قبل التوليد.');
+    if (text.length > 1500) {
+      setError('الحد الأقصى 1500 حرف لكل مقطع. اختصر النص قبل التوليد.');
       return;
     }
     if (!selectedVoice) {
@@ -82,8 +83,12 @@ export function App() {
         apiVersion: 1 as const,
         requestId: `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         text: text.trim(),
-        voice: { type: 'inline' as const, reference },
-        options: { speed, format },
+        voice: {
+          type: selectedVoice.source === 'builtin' ? ('preset' as const) : ('custom' as const),
+          voiceId: selectedVoice.id,
+          reference,
+        },
+        options: { speed, pitch, format },
       };
 
       const result = await modalClient.generateSpeech(
@@ -120,7 +125,7 @@ export function App() {
     } finally {
       if (abortControllerRef.current === controller) abortControllerRef.current = null;
     }
-  }, [text, selectedVoice, speed, format]);
+  }, [text, selectedVoice, speed, pitch, format]);
 
   // لا يعمل الاختصار خلف النوافذ أو أثناء طلب جارٍ.
   useEffect(() => {
@@ -128,7 +133,7 @@ export function App() {
       if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
         if (isCloningOpen || isSettingsOpen || isHistoryOpen) return;
         event.preventDefault();
-        if (!isGenerating && text.trim() && text.length <= 600) handleGenerate();
+        if (!isGenerating && text.trim() && text.length <= 1500) handleGenerate();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -255,7 +260,17 @@ export function App() {
               </div>
             )}
 
-            <ManuscriptEditor text={text} onChange={setText} speed={speed} onSpeedChange={setSpeed} format={format} onFormatChange={setFormat} disabled={isGenerating} />
+            <ManuscriptEditor
+              text={text}
+              onChange={setText}
+              speed={speed}
+              onSpeedChange={setSpeed}
+              pitch={pitch}
+              onPitchChange={setPitch}
+              format={format}
+              onFormatChange={setFormat}
+              disabled={isGenerating}
+            />
 
             <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-xs leading-relaxed text-mist-500">
               <span className="flex items-center gap-2">
