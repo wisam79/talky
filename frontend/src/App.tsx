@@ -1,14 +1,21 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Settings,
   History,
   AlertCircle,
+  ArrowDownToLine,
+  AudioLines,
+  Clock3,
+  FileAudio,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import type { VoicePersona, GenerationPhase } from './domain/types';
 import { ManuscriptEditor } from './features/editor/ManuscriptEditor';
 import { VoiceRack } from './features/voices/VoiceRack';
 import { TransportPlayer } from './features/player/TransportPlayer';
 import { VoiceCloningModal } from './features/recorder/VoiceCloningModal';
+import { StudioDialog } from './components/StudioDialog';
 import { voiceManager } from './services/voices/VoiceManager';
 import { modalClient } from './services/api/ModalClient';
 import { audioService } from './services/audio/AudioService';
@@ -17,64 +24,44 @@ import type { HistoryItem } from './storage/db';
 
 export function App() {
   const [text, setText] = useState(
-    'أهلاً بكم في استوديو توكي؛ أحدث تقنيات توليد الصوت العربي الطبيعي واستنساخ النبرات بالذكاء الاصطناعي.'
+    'لكلِّ كلمةٍ حكاية، ولكلِّ حكايةٍ صوت. أهلًا بك في تالكي، مساحتك لتحويل الأفكار إلى صوتٍ عربيٍّ ينبض بالحياة.'
   );
   const [speed, setSpeed] = useState<number>(1.0);
   const [format, setFormat] = useState<'wav' | 'mp3'>('wav');
-
   const [voices, setVoices] = useState<VoicePersona[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<VoicePersona | null>(null);
-
   const [phase, setPhase] = useState<GenerationPhase>('idle');
   const [error, setError] = useState<string | null>(null);
-
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
   const [timings, setTimings] = useState<{ inferMs: number; totalMs: number } | undefined>();
-
   const [isCloningOpen, setIsCloningOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [endpointInput, setEndpointInput] = useState(modalClient.getEndpoint());
-
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-
   const [isServerWarm, setIsServerWarm] = useState<boolean | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isGenerating = phase !== 'idle' && phase !== 'ready' && phase !== 'error';
 
-  // تحميل الشخصيات وفحص حالة السيرفر عند البدء
+  // تحميل الأصوات والسجل محلياً دون إيقاظ الخادم.
   useEffect(() => {
     async function init() {
       const allVoices = await voiceManager.getAllVoices();
       setVoices(allVoices);
-      if (allVoices.length > 0) {
-        setSelectedVoice(allVoices[0]);
-      }
-      const history = await getHistory();
-      setHistoryItems(history);
-
-      // لا نقوم بإيقاظ السيرفر تلقائياً عند فتح الصفحة لتوفير الرصيد
+      if (allVoices.length > 0) setSelectedVoice(allVoices[0]);
+      setHistoryItems(await getHistory());
       setIsServerWarm(false);
     }
     init();
   }, []);
 
-  // اختصار لوحة المفاتيح Ctrl+Enter للتوليد السريع
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (text.trim() && phase === 'idle') {
-          handleGenerate();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [text, selectedVoice, speed, format, phase]);
-
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     if (!text.trim()) {
       setError('يرجى كتابة نص لتوليد الصوت');
+      return;
+    }
+    if (text.length > 600) {
+      setError('الحد الأقصى 600 حرف لكل مقطع. اختصر النص قبل التوليد.');
       return;
     }
     if (!selectedVoice) {
@@ -84,39 +71,35 @@ export function App() {
 
     setError(null);
     setPhase('preparing');
-    abortControllerRef.current = new AbortController();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       const reference = await voiceManager.getReferencePayload(selectedVoice);
+      if (controller.signal.aborted) return;
 
       const request = {
         apiVersion: 1 as const,
         requestId: `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         text: text.trim(),
-        voice: {
-          type: 'inline' as const,
-          reference,
-        },
-        options: {
-          speed,
-          format,
-        },
+        voice: { type: 'inline' as const, reference },
+        options: { speed, format },
       };
 
       const result = await modalClient.generateSpeech(
         request,
-        (newPhase) => setPhase(newPhase),
-        abortControllerRef.current.signal
+        (newPhase) => {
+          if (!controller.signal.aborted) setPhase(newPhase);
+        },
+        controller.signal
       );
+      if (controller.signal.aborted) return;
 
       const audioUrl = audioService.base64ToBlobUrl(result.audio.base64, result.audio.mimeType);
       setGeneratedAudioUrl(audioUrl);
-      setTimings({
-        inferMs: result.meta.timings.inferMs,
-        totalMs: result.meta.timings.totalMs,
-      });
+      setTimings({ inferMs: result.meta.timings.inferMs, totalMs: result.meta.timings.totalMs });
 
-      // حفظ في السجل المحلي
+      // حفظ المقطع في السجل المحلي.
       const historyItem: HistoryItem = {
         id: result.requestId,
         text: text.trim(),
@@ -127,28 +110,40 @@ export function App() {
       };
       await saveHistoryItem(historyItem);
       setHistoryItems((prev) => [historyItem, ...prev]);
-
       setPhase('ready');
       setIsServerWarm(true);
     } catch (err: unknown) {
+      if (controller.signal.aborted) return;
       console.error(err);
       setError(err instanceof Error ? err.message : 'فشل التوليد');
       setPhase('error');
+    } finally {
+      if (abortControllerRef.current === controller) abortControllerRef.current = null;
     }
-  };
+  }, [text, selectedVoice, speed, format]);
+
+  // لا يعمل الاختصار خلف النوافذ أو أثناء طلب جارٍ.
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        if (isCloningOpen || isSettingsOpen || isHistoryOpen) return;
+        event.preventDefault();
+        if (!isGenerating && text.trim() && text.length <= 600) handleGenerate();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleGenerate, isGenerating, isCloningOpen, isSettingsOpen, isHistoryOpen, text]);
 
   const handleCancel = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     setPhase('idle');
   };
 
   const handleVoiceCreated = async (newVoice: VoicePersona) => {
     await voiceManager.addCustomVoice(newVoice);
-    const updated = await voiceManager.getAllVoices();
-    setVoices(updated);
+    setVoices(await voiceManager.getAllVoices());
     setSelectedVoice(newVoice);
   };
 
@@ -156,15 +151,12 @@ export function App() {
     await voiceManager.removeCustomVoice(id);
     const updated = await voiceManager.getAllVoices();
     setVoices(updated);
-    if (selectedVoice?.id === id) {
-      setSelectedVoice(updated[0] || null);
-    }
+    if (selectedVoice?.id === id) setSelectedVoice(updated[0] || null);
   };
 
   const loadFromHistory = (item: HistoryItem) => {
     setText(item.text);
-    const url = audioService.base64ToBlobUrl(item.audioBase64);
-    setGeneratedAudioUrl(url);
+    setGeneratedAudioUrl(audioService.base64ToBlobUrl(item.audioBase64));
     setTimings(undefined);
     setIsHistoryOpen(false);
   };
@@ -172,224 +164,166 @@ export function App() {
   const saveEndpoint = () => {
     modalClient.setEndpoint(endpointInput);
     setIsSettingsOpen(false);
-    modalClient.checkHealth().then((h) => setIsServerWarm(h.ok));
+    modalClient.checkHealth().then((health) => setIsServerWarm(health.ok));
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0F1F] text-[#EEEAE0] flex flex-col font-plex">
-      {/* 1. الشريط العلوي (Top Bar - 56px) */}
-      <header className="h-[56px] border-b border-[#222C54] bg-[#0A0F1F] px-6 flex items-center justify-between sticky top-0 z-30">
-        {/* طرف البداية: الشعار وفق فلسفة «حَرَكات» */}
-        <div className="flex items-center gap-3 select-none">
-          {/* أيقونة حرف «ت» المخصصة: جسد الحرف موجة ونقطتاه نحاسيتان */}
-          <div className="flex items-center gap-2">
-            <svg width="28" height="28" viewBox="0 0 32 32" fill="none" className="shrink-0">
-              {/* نقطتان نحاسيتان */}
-              <circle cx="12" cy="8" r="2.5" fill="#E0A93B" />
-              <circle cx="20" cy="8" r="2.5" fill="#E0A93B" />
-              {/* جسد الحرف على شكل موجة صوتية فصيحة */}
-              <path
-                d="M5 16C9 16 11 23 16 23C21 23 23 16 27 16"
-                stroke="#38C6B5"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-            </svg>
-            <span className="font-bold text-lg text-[#EEEAE0] tracking-wide font-plex">
-              تالكي
-            </span>
-          </div>
-          <span className="text-[11px] font-normal text-[#7C85A8] border-r border-[#222C54] pr-3 mr-1 hidden sm:inline">
-            لغة التصميم «حَرَكات»
-          </span>
-        </div>
+    <div className="studio-app">
+      <a href="#manuscript-text" className="skip-link">انتقل إلى محرر النص</a>
 
-        {/* طرف النهاية: حالة الخادم والسجل والإعدادات */}
-        <div className="flex items-center gap-3">
-          {/* مصباح حالة الخادم السحابي */}
-          <div
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-[#10172D] border border-[#222C54] text-[11px] text-[#A9B0CB]"
-            title="حالة خادم Modal الذكي"
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                isServerWarm
-                  ? 'bg-[#38C6B5] shadow-[0_0_8px_#38C6B5]'
-                  : 'bg-[#E0A93B] animate-pulse'
-              }`}
-            />
-            <span className="hidden sm:inline">
-              {isServerWarm ? 'الخادم نشط' : 'الخادم في وضع الاستعداد'}
-            </span>
+      <header className="studio-header">
+        <div className="studio-width flex min-h-20 items-center justify-between gap-4">
+          <div className="flex items-center gap-3 select-none">
+            <div className="flex size-11 items-center justify-center rounded-slot border border-ink-500 bg-ink-800" aria-hidden="true">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <circle cx="12" cy="8" r="2" className="fill-brass-400" />
+                <circle cx="20" cy="8" r="2" className="fill-brass-400" />
+                <path d="M5 16C9 16 11 23 16 23C21 23 23 16 27 16" className="stroke-paper-100" strokeWidth="2.5" strokeLinecap="round" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xl font-semibold leading-snug">تالكي<span className="ms-2 text-xs font-normal text-mist-500" lang="en">Talky</span></p>
+              <p className="mt-0.5 hidden text-xs text-mist-300 sm:block">استوديو الصوت العربي</p>
+            </div>
+            <div className="ms-5 hidden items-center gap-2 border-s border-ink-600 ps-6 text-sm text-paper-100 xl:flex">
+              <AudioLines className="size-4 text-mist-300" strokeWidth={1.75} aria-hidden="true" />
+              تحويل النص إلى صوت
+            </div>
           </div>
 
-          {/* زر السجل */}
-          <button
-            type="button"
-            onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-            className="h-8 px-2.5 rounded-[6px] bg-[#10172D] hover:bg-[#172040] border border-[#222C54] text-[#A9B0CB] hover:text-[#EEEAE0] text-xs transition-colors flex items-center gap-1.5"
-            title="سجل المقاطع السابقة"
-          >
-            <History className="w-3.5 h-3.5 text-[#E0A93B]" />
-            <span className="tabular-numbers">({historyItems.length})</span>
-          </button>
-
-          {/* زر الإعدادات */}
-          <button
-            type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            className="w-8 h-8 rounded-[6px] bg-[#10172D] hover:bg-[#172040] border border-[#222C54] text-[#A9B0CB] hover:text-[#EEEAE0] flex items-center justify-center transition-colors"
-            title="إعدادات الرابط السحابي"
-          >
-            <Settings className="w-3.5 h-3.5" />
-          </button>
+          <nav className="flex items-center gap-1.5 sm:gap-3" aria-label="أدوات الاستوديو">
+            <span className="status-pill me-2 hidden md:inline-flex" title="لا يتم الاتصال بالخادم عند فتح الصفحة">
+              <span className={`size-1.5 rounded-full ${isGenerating ? 'bg-brass-400 animate-pulse' : isServerWarm ? 'bg-firoz-400' : 'bg-mist-500'}`} aria-hidden="true" />
+              {isGenerating ? 'الاستوديو يعمل' : isServerWarm ? 'تم الاتصال بالخادم' : 'جاهز عند الطلب'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsHistoryOpen(true)}
+              disabled={isGenerating}
+              className="studio-button studio-button-ghost px-3"
+              aria-label={`سجل المقاطع (${historyItems.length})`}
+              aria-haspopup="dialog"
+            >
+              <History className="size-5" strokeWidth={1.75} aria-hidden="true" />
+              <span className="hidden sm:inline">السجل</span>
+              {historyItems.length > 0 && <span className="text-xs tabular-numbers">{historyItems.length}</span>}
+            </button>
+            <button type="button" onClick={() => setIsSettingsOpen(true)} disabled={isGenerating} className="studio-icon-button border border-ink-600 bg-ink-800" aria-label="إعدادات الاستوديو" aria-haspopup="dialog" title="إعدادات الاستوديو">
+              <Settings className="size-5" strokeWidth={1.75} aria-hidden="true" />
+            </button>
+          </nav>
         </div>
       </header>
 
-      {/* 2. منطقة العمل الرئيسية (الصفحة في الوسط والرف على اليمين) */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* رف الأصوات (Right Side - 320px) */}
-        <VoiceRack
-          voices={voices}
-          selectedVoiceId={selectedVoice?.id || ''}
-          onSelectVoice={setSelectedVoice}
-          onOpenCloningModal={() => setIsCloningOpen(true)}
-          onDeleteCustomVoice={handleDeleteCustomVoice}
-          disabled={phase !== 'idle' && phase !== 'ready' && phase !== 'error'}
-        />
-
-        {/* الصفحة والمحرر (Center - max 760px) */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-8 flex flex-col items-center justify-start gap-6 bg-[#0A0F1F]">
-          {/* تنبيه الخطأ وفق مواصفة ErrorBanner */}
-          {error && (
-            <div className="w-full max-w-[760px] bg-[#172040] border-r-2 border-[#F0737F] border border-[#222C54] rounded-[6px] p-4 text-xs flex items-start justify-between gap-3 shadow-lg">
-              <div className="flex items-start gap-2.5 text-[#F0737F]">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-[#EEEAE0] mb-0.5">حدث خطأ أثناء الطلب</p>
-                  <p className="text-[#A9B0CB] leading-relaxed">{error}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setError(null)}
-                className="text-[#7C85A8] hover:text-[#EEEAE0]"
-              >
-                إغلاق
-              </button>
+      <main className="studio-width studio-workspace">
+        <div className="mb-7 flex items-end justify-between gap-6 sm:mb-8">
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-xs text-mist-300">
+              <Sparkles className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
+              مساحة للإبداع، بلغتك
             </div>
-          )}
+            <h1 className="font-amiri text-[34px] leading-[1.5] text-paper-100 sm:text-[42px]">امنح كلماتك صوتًا.</h1>
+            <p className="mt-1 text-sm leading-7 text-mist-300">اختر نبرة، اكتب حكايتك، واترك الباقي لتالكي.</p>
+          </div>
+          <div className="hidden items-center gap-2 pb-2 text-xs text-mist-300 lg:flex">
+            <ShieldCheck className="size-4 text-mist-500" strokeWidth={1.75} aria-hidden="true" />
+            سجل مقاطعك محفوظ في متصفحك
+          </div>
+        </div>
 
-          {/* المحرر الورقي ManuscriptEditor */}
-          <ManuscriptEditor
-            text={text}
-            onChange={setText}
-            speed={speed}
-            onSpeedChange={setSpeed}
-            format={format}
-            onFormatChange={setFormat}
-            disabled={phase !== 'idle' && phase !== 'ready' && phase !== 'error'}
+        <div className="studio-grid">
+          <VoiceRack
+            voices={voices}
+            selectedVoiceId={selectedVoice?.id || ''}
+            onSelectVoice={setSelectedVoice}
+            onOpenCloningModal={() => setIsCloningOpen(true)}
+            onDeleteCustomVoice={handleDeleteCustomVoice}
+            disabled={isGenerating}
           />
 
-          {/* شاشة السجل السريع إن كانت مفتوحة */}
-          {isHistoryOpen && (
-            <div className="w-full max-w-[760px] bg-[#10172D] border border-[#222C54] rounded-[8px] p-4 shadow-xl animate-in fade-in duration-200">
-              <div className="flex items-center justify-between pb-2 mb-3 border-b border-[#222C54]">
-                <h4 className="text-xs font-semibold text-[#EEEAE0] flex items-center gap-1.5">
-                  <History className="w-3.5 h-3.5 text-[#E0A93B]" />
-                  <span>سجل المقاطع المولدة محلياً</span>
-                </h4>
-                <button
-                  type="button"
-                  onClick={() => setIsHistoryOpen(false)}
-                  className="text-[11px] text-[#7C85A8] hover:text-[#EEEAE0]"
-                >
-                  إغلاق
-                </button>
-              </div>
-
-              {historyItems.length === 0 ? (
-                <p className="text-xs text-[#7C85A8] text-center py-4">
-                  لا توجد مقاطع سابقة. قم بتوليد أول صوت وسيُحفظ هنا تلقائياً!
-                </p>
-              ) : (
-                <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                  {historyItems.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => loadFromHistory(item)}
-                      className="p-2.5 bg-[#0A0F1F] hover:bg-[#172040] border border-[#222C54] rounded-[6px] transition-colors cursor-pointer flex items-center justify-between gap-3 text-xs"
-                    >
-                      <div className="truncate flex-1">
-                        <p className="text-[#EEEAE0] font-amiri text-sm truncate">{item.text}</p>
-                        <span className="text-[10px] text-[#38C6B5]">بصوت: {item.voiceName}</span>
-                      </div>
-                      <span className="text-[10px] text-[#7C85A8] shrink-0 font-mono">
-                        {(item.durationMs / 1000).toFixed(1)}ث
-                      </span>
-                    </div>
-                  ))}
+          <div className="min-w-0 space-y-4">
+            {error && (
+              <div role="alert" className="flex items-start justify-between gap-3 rounded-control border border-unnab-400/30 border-s-2 border-s-unnab-400 bg-ink-800 p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="mt-0.5 size-5 shrink-0 text-unnab-400" strokeWidth={1.75} aria-hidden="true" />
+                  <div>
+                    <p className="mb-1 text-sm font-semibold">تعذّر إكمال الطلب</p>
+                    <p className="break-words text-sm leading-7 text-mist-300">{error}</p>
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
-        </main>
-      </div>
+                <button type="button" onClick={() => setError(null)} className="studio-button studio-button-ghost shrink-0 px-2">إغلاق</button>
+              </div>
+            )}
 
-      {/* 3. شريط النقل اللاصق بالأسفل (TransportPlayer - 88px) */}
+            <ManuscriptEditor text={text} onChange={setText} speed={speed} onSpeedChange={setSpeed} format={format} onFormatChange={setFormat} disabled={isGenerating} />
+
+            <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-xs leading-relaxed text-mist-500">
+              <span className="flex items-center gap-2">
+                <AudioLines className="size-4" strokeWidth={1.75} aria-hidden="true" />
+                <span>النبرة المختارة: <bdi className="text-mist-300">{selectedVoice?.name || 'لم يتم الاختيار'}</bdi></span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <ArrowDownToLine className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
+                استمع، ثم نزّل مقطعك
+              </span>
+            </div>
+          </div>
+        </div>
+      </main>
+
       <TransportPlayer
         audioUrl={generatedAudioUrl}
         phase={phase}
         onGenerate={handleGenerate}
         onCancel={handleCancel}
-        isTextEmpty={!text.trim()}
+        isTextEmpty={!text.trim() || text.length > 600 || !selectedVoice}
         timings={timings}
       />
 
-      {/* نافذة استنساخ الصوت مع إقرار الموافقة الصريحة (§8.8 ConsentGate) */}
-      <VoiceCloningModal
-        isOpen={isCloningOpen}
-        onClose={() => setIsCloningOpen(false)}
-        onVoiceCreated={handleVoiceCreated}
-      />
+      <VoiceCloningModal isOpen={isCloningOpen} onClose={() => setIsCloningOpen(false)} onVoiceCreated={handleVoiceCreated} />
 
-      {/* نافذة ضبط الرابط السحابي */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="bg-[#10172D] border border-[#222C54] rounded-[10px] w-full max-w-md p-6 shadow-2xl">
-            <h3 className="font-bold text-base text-[#EEEAE0] mb-2 font-plex">
-              إعدادات الرابط السحابي (Modal Endpoint)
-            </h3>
-            <p className="text-xs text-[#A9B0CB] mb-4 leading-relaxed font-plex">
-              عنوان نقطة نهاية خادم الذكاء الاصطناعي المنشور على Modal:
-            </p>
-
-            <input
-              type="text"
-              value={endpointInput}
-              onChange={(e) => setEndpointInput(e.target.value)}
-              className="w-full bg-[#0A0F1F] border border-[#222C54] rounded-[6px] px-3 py-2 text-xs font-mono text-[#EEEAE0] focus:border-[#E0A93B] outline-none mb-4"
-            />
-
-            <div className="flex items-center justify-end gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => setIsSettingsOpen(false)}
-                className="px-4 py-2 bg-[#172040] hover:bg-[#222C54] text-[#A9B0CB] rounded-[6px]"
-              >
-                إلغاء
-              </button>
-              <button
-                type="button"
-                onClick={saveEndpoint}
-                className="px-5 py-2 bg-[#E0A93B] hover:bg-[#B8822A] text-[#0A0F1F] font-bold rounded-[6px]"
-              >
-                حفظ الرابط
-              </button>
+      <StudioDialog isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} title="مكتبتك الصوتية" description="كل ما صنعته من مقاطع، محفوظ في هذا المتصفح." icon={<History className="size-5" strokeWidth={1.75} />}>
+        {historyItems.length === 0 ? (
+          <div className="py-8 text-center">
+            <div className="mx-auto mb-5 flex size-16 items-center justify-center rounded-slot border border-ink-600 bg-ink-900 text-mist-500">
+              <FileAudio className="size-7" strokeWidth={1.25} aria-hidden="true" />
             </div>
+            <h3 className="font-amiri text-2xl">حكايتك الأولى تبدأ هنا</h3>
+            <p className="mx-auto mt-2 max-w-xs text-sm leading-7 text-mist-300">بعد توليد أول مقطع، ستجده هنا لتعود إليه وتستمع متى شئت.</p>
+            <button type="button" onClick={() => setIsHistoryOpen(false)} className="studio-button studio-button-secondary mt-6">العودة إلى الاستوديو</button>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="space-y-3">
+            {historyItems.map((item) => (
+              <button key={item.id} type="button" onClick={() => loadFromHistory(item)} className="flex w-full items-center gap-4 rounded-control border border-ink-600 bg-ink-900 p-4 text-start transition-colors hover:border-ink-500 hover:bg-ink-700">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-control border border-ink-600 text-firoz-400"><FileAudio className="size-5" strokeWidth={1.75} aria-hidden="true" /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-amiri text-xl leading-loose">{item.text}</span>
+                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-mist-300">
+                    <span>بصوت: <bdi>{item.voiceName}</bdi></span>
+                    <span className="flex items-center gap-1 tabular-numbers"><Clock3 className="size-3" aria-hidden="true" />{(item.durationMs / 1000).toFixed(1)} ث</span>
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </StudioDialog>
+
+      <StudioDialog isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} title="إعدادات الاستوديو" description="اربط استوديو تالكي بخادم توليد الصوت الخاص بك." icon={<Settings className="size-5" strokeWidth={1.75} />}>
+        <form onSubmit={(event) => { event.preventDefault(); saveEndpoint(); }}>
+          <label htmlFor="modal-endpoint" className="studio-field-label">رابط الخادم السحابي <span lang="en">(Modal Endpoint)</span></label>
+          <input id="modal-endpoint" type="url" dir="ltr" required value={endpointInput} onChange={(event) => setEndpointInput(event.target.value)} className="studio-field text-left" aria-describedby="endpoint-note" autoComplete="off" spellCheck={false} />
+          <div id="endpoint-note" className="studio-note mt-4 rounded-control border border-ink-600 bg-ink-900 p-4">
+            <ShieldCheck className="mt-1 size-4 shrink-0 text-mist-500" strokeWidth={1.75} aria-hidden="true" />
+            <p>يُحفظ الرابط في متصفحك. سيُفحص الاتصال عند الحفظ؛ لا نوقظ الخادم لمجرد فتح الاستوديو.</p>
+          </div>
+          <div className="mt-6 flex items-center justify-end gap-2 border-t border-ink-600 pt-5">
+            <button type="button" onClick={() => setIsSettingsOpen(false)} className="studio-button studio-button-ghost">إلغاء</button>
+            <button type="submit" className="studio-button studio-button-primary">حفظ الرابط</button>
+          </div>
+        </form>
+      </StudioDialog>
     </div>
   );
 }

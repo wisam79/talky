@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Play, Pause, Download, Sparkles, X } from 'lucide-react';
+import { Play, Pause, Download, Sparkles, X, Headphones } from 'lucide-react';
 import type { GenerationPhase } from '../../domain/types';
 
 interface TransportPlayerProps {
@@ -12,195 +12,186 @@ interface TransportPlayerProps {
   timings?: { inferMs: number; totalMs: number };
 }
 
+const PHASE_LABELS: Record<GenerationPhase, string> = {
+  idle: 'مساحة الاستماع',
+  preparing: 'تجهيز النص والنبرة…',
+  connecting: 'الاتصال بخادم الصوت…',
+  warming: 'إيقاظ خادم الصوت… قد يستغرق قليلًا',
+  generating: 'كلماتك تتحوّل إلى صوت…',
+  decoding: 'تجهيز المقطع للاستماع…',
+  ready: 'مقطعك جاهز للاستماع',
+  error: 'يمكنك المحاولة مجددًا',
+};
+
 export const TransportPlayer: React.FC<TransportPlayerProps> = ({
   audioUrl,
   phase,
   onGenerate,
   onCancel,
   isTextEmpty,
-  timings: _timings,
+  timings,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
-
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-
+  const [isAudioReady, setIsAudioReady] = useState(false);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
   const isGenerating = phase !== 'idle' && phase !== 'ready' && phase !== 'error';
 
   useEffect(() => {
     if (!containerRef.current || !audioUrl) return;
 
-    if (wavesurferRef.current) {
-      wavesurferRef.current.destroy();
-    }
-
-    // لغة حركات: waveColor = firoz-600 (#2A8C84), progressColor = firoz-400 (#38C6B5)
+    // ألوان الموجة من رموز التصميم نفسها، دون تغيير معالجة الصوت.
+    const styles = getComputedStyle(document.documentElement);
     const ws = WaveSurfer.create({
       container: containerRef.current,
-      waveColor: '#2A8C84',
-      progressColor: '#38C6B5',
-      cursorColor: '#E0A93B',
+      waveColor: styles.getPropertyValue('--color-firoz-600').trim(),
+      progressColor: styles.getPropertyValue('--color-firoz-400').trim(),
+      cursorColor: styles.getPropertyValue('--color-brass-400').trim(),
       cursorWidth: 2,
-      barWidth: 3,
+      barWidth: 2,
       barGap: 3,
       barRadius: 2,
-      height: 48,
+      height: 40,
       normalize: true,
     });
-
-    ws.load(audioUrl);
-
-    ws.on('ready', () => {
-      setDuration(ws.getDuration());
-      setIsPlaying(false);
-    });
-
-    ws.on('audioprocess', () => {
-      setCurrentTime(ws.getCurrentTime());
-    });
-
-    ws.on('finish', () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-    });
-
+    let disposed = false;
     wavesurferRef.current = ws;
 
+    ws.on('load', () => {
+      setIsAudioReady(false);
+      setIsPlaying(false);
+      setCurrentTime(0);
+      setDuration(0);
+      setPlaybackError(null);
+    });
+    ws.on('ready', () => {
+      setDuration(ws.getDuration());
+      setIsAudioReady(true);
+    });
+    ws.on('timeupdate', (time) => setCurrentTime(time));
+    ws.on('play', () => setIsPlaying(true));
+    ws.on('pause', () => setIsPlaying(false));
+    ws.on('finish', () => setIsPlaying(false));
+    ws.on('error', () => {
+      if (!disposed) {
+        setIsAudioReady(false);
+        setPlaybackError('تعذّر تشغيل المقطع. يمكنك تنزيله والمحاولة في مشغّل آخر.');
+      }
+    });
+    void ws.load(audioUrl).catch(() => {
+      if (!disposed) setPlaybackError('تعذّر تحميل المعاينة الصوتية.');
+    });
+
     return () => {
+      disposed = true;
+      wavesurferRef.current = null;
       ws.destroy();
     };
-  }, [audioUrl, phase]);
+  }, [audioUrl]);
 
-  const togglePlay = () => {
-    if (wavesurferRef.current) {
-      wavesurferRef.current.playPause();
-      setIsPlaying(wavesurferRef.current.isPlaying());
+  useEffect(() => {
+    if (isGenerating) wavesurferRef.current?.pause();
+  }, [isGenerating]);
+
+  const togglePlay = async () => {
+    try {
+      await wavesurferRef.current?.playPause();
+    } catch {
+      setPlaybackError('تعذّر تشغيل المقطع. حاول الضغط على التشغيل مرة أخرى.');
     }
   };
 
-  const formatTime = (secs: number) => {
-    const mins = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
-    return `${mins}:${s < 10 ? '0' : ''}${s}`;
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes}:${Math.floor(seconds % 60).toString().padStart(2, '0')}`;
   };
 
   const downloadAudio = () => {
     if (!audioUrl) return;
-    const a = document.createElement('a');
-    a.href = audioUrl;
-    a.download = `talky_${Date.now()}.wav`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const anchor = document.createElement('a');
+    anchor.href = audioUrl;
+    anchor.download = `talky_${Date.now()}.wav`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
   };
 
   return (
-    <footer className="h-[88px] bg-[#10172D] border-t border-[#222C54] sticky bottom-0 z-40 px-4 sm:px-8 flex items-center justify-between gap-4 shadow-2xl">
-      {/* 1. طرف البداية (يمين في RTL): زر التوليد النحاسي */}
-      <div className="shrink-0">
-        {isGenerating ? (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="h-[48px] px-6 bg-transparent hover:bg-[#172040] border border-[#34406E] text-[#EEEAE0] rounded-[10px] text-[15px] font-semibold transition-all inline-flex items-center gap-2"
-          >
-            <X className="w-4 h-4 text-[#F0737F]" />
-            <span>إلغاء</span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onGenerate}
-            disabled={isTextEmpty}
-            className={`h-[48px] px-8 bg-[#E0A93B] hover:bg-[#B8822A] active:translate-y-[1px] text-[#0A0F1F] rounded-[10px] text-[15px] font-bold shadow-lg shadow-[#E0A93B]/10 transition-all inline-flex items-center gap-2.5 font-plex ${
-              isTextEmpty ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
-            }`}
-          >
-            <Sparkles className="w-4 h-4 fill-current" />
-            <span>ولِّد الصوت</span>
-          </button>
-        )}
-      </div>
-
-      {/* 2. الجهاز الأوسط (LTR مستقل): التشغيل والموجة والزمن */}
-      <div
-        dir="ltr"
-        className="flex-1 max-w-[720px] mx-auto flex items-center gap-4 bg-[#0A0F1F]/60 border border-[#222C54]/60 rounded-[12px] px-4 py-2 h-[64px]"
-      >
-        {/* زر التشغيل الدائري 44px */}
-        <button
-          type="button"
-          onClick={togglePlay}
-          disabled={!audioUrl || isGenerating}
-          className={`w-[44px] h-[44px] rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-95 ${
-            audioUrl && !isGenerating
-              ? 'bg-[#172040] hover:bg-[#222C54] text-[#38C6B5] border border-[#222C54]'
-              : 'bg-[#0A0F1F] text-[#7C85A8] border border-[#222C54]/50 cursor-not-allowed'
-          }`}
-          title={isPlaying ? 'إيقاف مؤقت' : 'تشغيل'}
-        >
-          {isPlaying ? (
-            <Pause className="w-5 h-5 fill-current" />
+    <footer className="studio-transport" aria-label="توليد الصوت والاستماع">
+      <div className="studio-width">
+        <div className="mb-3 flex items-center justify-between gap-3 text-xs">
+          <p className="flex min-w-0 items-center gap-2 text-mist-300" role="status" aria-live="polite">
+            <Headphones className="size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+            <span>{playbackError || (audioUrl && !isGenerating && phase === 'idle' ? 'مقطعك جاهز للاستماع' : PHASE_LABELS[phase])}</span>
+          </p>
+          {timings && !isGenerating ? (
+            <span className="hidden shrink-0 text-mist-300 sm:inline">زمن التوليد <span className="tabular-numbers">{(timings.totalMs / 1000).toFixed(1)}</span> ث</span>
           ) : (
-            <Play className="w-5 h-5 fill-current ml-0.5" />
+            <span className="hidden shrink-0 text-mist-500 sm:inline">من النص إلى النبرة، في مساحة واحدة</span>
           )}
-        </button>
+        </div>
 
-        {/* عارض القلم (Waveform) أو شريط الانتظار بالحركات */}
-        <div className="flex-1 overflow-hidden relative flex items-center h-full">
-          {/* حاوية WaveSurfer تبقى دائماً في الـ DOM لضمان استقرار الربط */}
-          <div
-            ref={containerRef}
-            className={`w-full cursor-pointer ${
-              !audioUrl || isGenerating ? 'hidden' : 'block'
-            }`}
-          />
+        <div className="transport-controls">
+          <div>
+            {isGenerating ? (
+              <button type="button" onClick={onCancel} className="studio-button studio-button-secondary min-h-12 w-full">
+                <X className="size-4 text-unnab-400" strokeWidth={1.75} aria-hidden="true" />
+                إلغاء التوليد
+              </button>
+            ) : (
+              <button type="button" onClick={onGenerate} disabled={isTextEmpty} className="studio-button studio-button-primary min-h-12 w-full gap-3">
+                <Sparkles className="size-4" strokeWidth={1.75} aria-hidden="true" />
+                <span>ولِّد الصوت</span>
+                <kbd className="ms-auto hidden border-s border-ink-900/20 ps-3 text-xs font-normal opacity-70 lg:inline" dir="ltr" title="Ctrl أو Command + Enter">↵</kbd>
+              </button>
+            )}
+          </div>
 
-          {/* خط أفقي رفيع بلون ink-600 عندما لا يوجد صوت وليس هناك توليد */}
-          {!audioUrl && !isGenerating && (
-            <div className="w-full h-[1px] bg-[#222C54]" />
-          )}
+          <div dir="ltr" className="transport-timeline">
+            <button
+              type="button"
+              onClick={togglePlay}
+              disabled={!audioUrl || !isAudioReady || isGenerating}
+              className="flex size-11 shrink-0 items-center justify-center rounded-full border border-ink-600 bg-ink-700 text-firoz-400 transition-colors hover:bg-ink-600"
+              aria-label={isPlaying ? 'إيقاف مؤقت' : 'تشغيل المقطع'}
+              title={isPlaying ? 'إيقاف مؤقت' : 'تشغيل المقطع'}
+            >
+              {isPlaying ? <Pause className="size-4 fill-current" aria-hidden="true" /> : <Play className="ms-0.5 size-4 fill-current" aria-hidden="true" />}
+            </button>
 
-          {/* علامات التشكيل المتعاقبة أثناء التوليد فوق خط الأساس */}
-          {isGenerating && (
-            <div className="w-full flex items-center justify-center gap-3 text-2xl font-amiri text-[#A9B0CB] select-none py-1">
-              <span className="harakat-char-1">َ</span>
-              <span className="harakat-char-2">ُ</span>
-              <span className="harakat-char-3">ِ</span>
-              <span className="harakat-char-4">ْ</span>
-              <span className="harakat-char-5">ّ</span>
-              <span className="text-xs font-plex text-[#E0A93B] mr-2">
-                {phase === 'warming'
-                  ? 'المصباح يسخن... إيقاظ الخادم'
-                  : 'توليد النبرة الصوتية...'}
-              </span>
+            <div className="relative flex h-10 min-w-0 flex-1 items-center overflow-hidden">
+              {/* الحاوية تبقى في DOM وبعرضها الكامل، حتى أثناء الانتظار. */}
+              <div ref={containerRef} className={`w-full ${!audioUrl || isGenerating ? 'invisible' : 'visible'}`} />
+              {!audioUrl && !isGenerating && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                  <span className="absolute inset-x-0 h-px bg-ink-600" />
+                  <span className="relative bg-ink-900 px-3 text-xs text-mist-500" dir="rtl">صوتك يبدأ من هنا</span>
+                </div>
+              )}
+              {isGenerating && (
+                <div className="absolute inset-0 flex items-center justify-center gap-3 font-amiri text-2xl text-brass-400" aria-hidden="true">
+                  <span className="harakat-char-1">ـَ</span>
+                  <span className="harakat-char-2">ـُ</span>
+                  <span className="harakat-char-3">ـِ</span>
+                  <span className="harakat-char-4">ـْ</span>
+                  <span className="harakat-char-5">ـّ</span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* عدّاد الزمن LTR بالأرقام الجدولية */}
-        <div className="text-[13px] font-mono text-[#A9B0CB] shrink-0 tabular-numbers select-none">
-          <span>{formatTime(currentTime)}</span> / <span>{formatTime(duration)}</span>
-        </div>
-      </div>
+            <div className="shrink-0 select-none whitespace-nowrap text-xs tabular-numbers text-mist-300">
+              <span className="text-paper-100">{formatTime(currentTime)}</span><span className="mx-1.5 text-mist-500">/</span><span>{formatTime(duration)}</span>
+            </div>
+          </div>
 
-      {/* 3. طرف النهاية (يسار في RTL): زر تنزيل WAV */}
-      <div className="shrink-0">
-        <button
-          type="button"
-          onClick={downloadAudio}
-          disabled={!audioUrl || isGenerating}
-          className={`h-[40px] px-4 rounded-[8px] border border-[#222C54] text-xs font-semibold font-plex transition-colors inline-flex items-center gap-2 ${
-            audioUrl && !isGenerating
-              ? 'text-[#EEEAE0] hover:bg-[#172040] hover:border-[#34406E] cursor-pointer'
-              : 'text-[#7C85A8] border-[#222C54]/40 cursor-not-allowed opacity-50'
-          }`}
-        >
-          <Download className="w-4 h-4 text-[#38C6B5]" />
-          <span>تنزيل WAV</span>
-        </button>
+          <button type="button" onClick={downloadAudio} disabled={!audioUrl || isGenerating} className="studio-button studio-button-secondary min-h-12" aria-label="تنزيل المقطع الصوتي">
+            <Download className="size-4" strokeWidth={1.75} aria-hidden="true" />
+            <span>تنزيل<span className="hidden xl:inline"> المقطع</span></span>
+          </button>
+        </div>
       </div>
     </footer>
   );

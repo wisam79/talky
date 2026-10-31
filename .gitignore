@@ -46,6 +46,9 @@ backend/modal/tests/
 # Reference repos
 f5-tts-onnx-ref/
 
+# IDE & local plans
+.zcode/
+
 # OS files
 .DS_Store
 Thumbs.db
