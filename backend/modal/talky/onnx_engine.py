@@ -200,8 +200,9 @@ class OnnxSilmaEngine:
         self.in_sample_rate = int(custom_meta.get("in_sample_rate", 24000))
         self.out_sample_rate = int(custom_meta.get("out_sample_rate", 24000))
         self.hop_length = int(custom_meta.get("hop_length", 256))
-        self.nfe_step = int(custom_meta.get("nfe_step", 16))
+        self.nfe_step = int(custom_meta.get("nfe_step", 8))
         self.max_signal_length = int(custom_meta.get("max_signal_length", 2048))
+        print(f">>> [OnnxEngine] 📊 بيانات النموذج: nfe_step={self.nfe_step}, sample_rate={self.sample_rate}, hop={self.hop_length}")
 
         # إعدادات جلسة ONNX فائقة الكفاءة
         session_opts = onnxruntime.SessionOptions()
@@ -417,11 +418,14 @@ class OnnxSilmaEngine:
                 bind_inputs(bind, constant_inputs + (state_input,), inp_vals)
                 bind_outputs(bind, self.transformer_outputs, {self.transformer_output.name: state_buffers[1 - idx]})
 
-            # تشغيل المرحلة 2: Flow Matching Loop (16 خطوة سريعة)
+            # تشغيل المرحلة 2: Flow Matching Loop (8 خطوات سريعة)
+            t_loop_start = time.perf_counter()
             for st in range(self.nfe_step):
                 binding = transformer_bindings[st & 1]
                 binding.bind_ortvalue_input(step_input.name, step_buffers[st])
                 self.sess_transformer.run_with_iobinding(binding, run_options=self.run_options)
+            loop_duration = time.perf_counter() - t_loop_start
+            print(f">>> [OnnxEngine] ⚡ اكتملت حلقة {self.nfe_step} خطوات في: {loop_duration:.2f} ثانية (بمعدل {loop_duration/self.nfe_step:.3f} ثانية/خطوة)")
 
             # 5. تشغيل المرحلة 3: F5_Decode (تحويل Mel إلى موجة صوتية عبر Vocos)
             noise_final = state_buffers[self.nfe_step & 1]

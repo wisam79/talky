@@ -67,8 +67,8 @@ talky_image = (
     memory=16384,
     timeout=900,
 )
-def export_onnx(nfe_step: int = 16):
-    """تصدير نموذج Silma-TTS إلى صيغة ONNX المسرعة داخل نفس تطبيق talky-tts"""
+def export_onnx(nfe_step: int = 8):
+    """تصدير نموذج Silma-TTS إلى صيغة ONNX المسرعة داخل نفس تطبيق talky-tts (8 خطوات فائقة السرعة)"""
     import shutil
     import torch
     from safetensors.torch import save_file
@@ -185,9 +185,9 @@ def export_onnx(nfe_step: int = 16):
 @app.cls(
     image=talky_image,
     volumes={"/vol/silma-onnx": onnx_volume},
-    cpu=8.0,       # 8 أنوية فيزيائية سريعة واقتصادية
-    memory=6144,   # 6 جيجابايت رام كافية تماماً للنموذج
-    scaledown_window=15,  # إيقاف الحاوية تلقائياً بعد 15 ثانية لتوفير 90% من استهلاك الرصيد
+    cpu=8.0,              # 8 أنوية متوازنة اقتصادياً وسريعاً (الأمثل لمعالجة Flow-Matching)
+    memory=6144,          # 6 جيجابايت رام
+    scaledown_window=120, # دقيقتان لإبقاء الحاوية دافئة وتجنب أي Cold Start أثناء الجلسة
     timeout=180,
 )
 class TalkyServer:
@@ -195,9 +195,9 @@ class TalkyServer:
     def setup(self):
         import torch
         torch.set_num_threads(8)
-        torch.set_num_interop_threads(4)
+        torch.set_num_interop_threads(2)
         from talky.engine import SilmaEngine
-        print(">>> [Modal Container] جاري تهيئة خادم Talky الموحد باستهلاك اقتصادي...")
+        print(">>> [Modal Container] جاري تهيئة خادم Talky الموحد بسرعة 8 خطوات على 8 أنوية...")
         self.engine = SilmaEngine()
         self.engine.is_cold_start = True
 
@@ -257,8 +257,8 @@ def main(action: str = "test", text: str = "مرحباً بكم في استود�
     - لتشغيل تصدير ONNX: modal run backend/modal/app.py --action export
     """
     if action == "export":
-        print(">>> جاري طلب تصدير أوزان ONNX داخل تطبيق talky-tts الموحد...")
-        res = export_onnx.remote(nfe_step=16)
+        print(">>> جاري طلب تصدير أوزان ONNX Turbo (8 خطوات) داخل تطبيق talky-tts الموحد...")
+        res = export_onnx.remote(nfe_step=8)
         print("✅ اكتمل التصدير:", res)
         return
 
