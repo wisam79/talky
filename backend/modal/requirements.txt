@@ -1,0 +1,7 @@
+silma-tts
+torch
+torchaudio
+soundfile
+scipy
+fastapi
+pydantic

@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink-900: #0A0F1F;
+  --color-ink-800: #10172D;
+  --color-ink-700: #172040;
+  --color-ink-600: #222C54;
+  --color-ink-500: #34406E;
+
+  --color-paper-100: #EEEAE0;
+  --color-mist-300: #A9B0CB;
+  --color-mist-500: #7C85A8;
+
+  --color-brass-400: #E0A93B;
+  --color-brass-600: #B8822A;
+
+  --color-firoz-400: #38C6B5;
+  --color-firoz-600: #2A8C84;
+
+  --color-unnab-400: #F0737F;
+  --color-unnab-600: #C24A57;
+
+  --font-amiri: 'Amiri', serif;
+  --font-plex: 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+@layer base {
+  body {
+    direction: rtl;
+    text-align: right;
+    font-family: var(--font-plex);
+    background-color: #0A0F1F;
+    color: #EEEAE0;
+  }
+
+  /* الأرقام الجدولية */
+  .tabular-numbers {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* مسطرة المخطوطات خلف النص في المحرر */
+.manuscript-ruler {
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 53px,
+    #222C54 53px,
+    #222C54 54px
+  );
+  line-height: 2.1;
+}
+
+/* مؤشر الحركات المتعاقبة أثناء الانتظار */
+@keyframes harakatCycle {
+  0%, 100% { opacity: 0.2; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); color: #E0A93B; }
+}
+
+.harakat-char-1 { animation: harakatCycle 1.5s infinite 0.0s ease-in-out; }
+.harakat-char-2 { animation: harakatCycle 1.5s infinite 0.3s ease-in-out; }
+.harakat-char-3 { animation: harakatCycle 1.5s infinite 0.6s ease-in-out; }
+.harakat-char-4 { animation: harakatCycle 1.5s infinite 0.9s ease-in-out; }
+.harakat-char-5 { animation: harakatCycle 1.5s infinite 1.2s ease-in-out; }
+
+/* توهج المصباح النحاسي أثناء إيقاظ الخادم */
+@keyframes lampGlow {
+  0% { box-shadow: 0 0 4px rgba(224, 169, 59, 0.2); }
+  50% { box-shadow: 0 0 16px rgba(224, 169, 59, 0.6); }
+  100% { box-shadow: 0 0 4px rgba(224, 169, 59, 0.2); }
+}
+
+.lamp-warming {
+  animation: lampGlow 2.4s infinite ease-in-out;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0F1F;
+}
+::-webkit-scrollbar-thumb {
+  background: #222C54;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #34406E;
+}
