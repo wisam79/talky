@@ -52,9 +52,8 @@ export function App() {
       const history = await getHistory();
       setHistoryItems(history);
 
-      // فحص صحة الخادم السحابي
-      const health = await modalClient.checkHealth();
-      setIsServerWarm(health.ok ? (health.warm ?? true) : false);
+      // لا نقوم بإيقاظ السيرفر تلقائياً عند فتح الصفحة لتوفير الرصيد
+      setIsServerWarm(false);
     }
     init();
   }, []);

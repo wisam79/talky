@@ -185,19 +185,19 @@ def export_onnx(nfe_step: int = 16):
 @app.cls(
     image=talky_image,
     volumes={"/vol/silma-onnx": onnx_volume},
-    cpu=16.0,  # 16 نواة فيزيائية كاملة (32 vCPUs)
-    memory=16384,  # 16 جيجابايت رام
-    scaledown_window=180,  # 3 دقائق إبقاء نشط بعد آخر طلب
+    cpu=8.0,       # 8 أنوية فيزيائية سريعة واقتصادية
+    memory=6144,   # 6 جيجابايت رام كافية تماماً للنموذج
+    scaledown_window=15,  # إيقاف الحاوية تلقائياً بعد 15 ثانية لتوفير 90% من استهلاك الرصيد
     timeout=180,
 )
 class TalkyServer:
     @modal.enter()
     def setup(self):
         import torch
-        torch.set_num_threads(16)
+        torch.set_num_threads(8)
         torch.set_num_interop_threads(4)
         from talky.engine import SilmaEngine
-        print(">>> [Modal Container] جاري تهيئة خادم Talky الموحد على 16 نواة...")
+        print(">>> [Modal Container] جاري تهيئة خادم Talky الموحد باستهلاك اقتصادي...")
         self.engine = SilmaEngine()
         self.engine.is_cold_start = True
 
@@ -213,16 +213,13 @@ class TalkyServer:
 @app.function(
     image=talky_image,
     volumes={"/vol/silma-onnx": onnx_volume},
-    cpu=16.0,
-    memory=16384,
+    cpu=4.0,
+    memory=4096,
     timeout=180,
 )
 def generate_sample(text: str, ref_audio_b64: str, ref_text: str, speed: float = 1.0):
-    """دالة لاختبار التوليد مباشرة من سطر الأوامر بأقصى قوة معالج"""
+    """دالة لاختبار التوليد مباشرة من سطر الأوامر باستهلاك اقتصادي منخفض"""
     import tempfile
-    import torch
-    torch.set_num_threads(16)
-    torch.set_num_interop_threads(4)
     from talky.engine import SilmaEngine
     from talky.audio import decode_base64_audio, normalize_reference_audio, encode_audio_file
 

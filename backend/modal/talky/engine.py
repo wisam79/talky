@@ -27,7 +27,8 @@ class SilmaEngine:
             try:
                 from .onnx_engine import OnnxSilmaEngine
                 print(f">>> [SilmaEngine] اكتشاف أوزان ONNX في {self.model_dir}. جاري تهيئة المحرك المسرع...")
-                self.onnx_engine = OnnxSilmaEngine(model_dir=self.model_dir, num_threads=16)
+                threads = int(os.environ.get("TALKY_THREADS", min(8, os.cpu_count() or 4)))
+                self.onnx_engine = OnnxSilmaEngine(model_dir=self.model_dir, num_threads=threads)
                 self.engine_type = "onnx"
                 self.initialized = True
                 print(">>> [SilmaEngine] ⚡ تم تفعيل محرك ONNX فائق السرعة بنجاح!")
